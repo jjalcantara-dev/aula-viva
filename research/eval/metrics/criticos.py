@@ -1,143 +1,163 @@
-"""Errores que cambian el SIGNIFICADO, no solo la forma.
+"""Errores que cambian el significado, no solo la forma.
 
-El WER trata todos los errores por igual: confundir "de" por "del" cuenta lo mismo que
-perder una negacion. Para un alumno con discapacidad auditiva no es lo mismo en absoluto.
-Leer "el examen no es el martes" cuando el profesor dijo "el examen es el martes" no es
-un error de transcripcion: es informacion falsa que el alumno no puede detectar.
+El WER trata igual perder "de" que perder "no". Para un alumno con discapacidad auditiva
+no son lo mismo ni de lejos: confundir una preposicion se reconstruye por contexto,
+perder una negacion **invierte la frase**.
 
-Se miden tres categorias, elegidas porque un fallo en ellas invierte o destruye el
-contenido en lugar de degradarlo:
+  referencia: "el resultado no es significativo"
+  hipotesis : "el resultado es significativo"
+  WER 20% -- un error de cinco palabras. Y el alumno entiende lo contrario.
 
-  NEGACION   : "no", "nunca", "ningun"... Perder o anadir una invierte el sentido.
-  NUMEROS    : fechas, cantidades, notas. Un digito mal es un dato falso, no una errata.
-  NOMBRES    : personas, lugares, terminos propios. Ya se vio un caso real en exp-002,
-               donde el modelo sustituyo el nombre de una persona por el de una enfermedad.
+Esta metrica cuenta aparte tres categorias donde un error destruye el contenido:
 
-Esta metrica NO sustituye al WER: lo complementa. Un sistema puede tener buen WER y ser
-inservible si falla justo en estas tres cosas.
+  NEGACIONES : invierten el sentido. Es la mas grave.
+  NUMERALES  : fechas, cantidades, referencias a normativa o a paginas.
+  CUANTIFICADORES : "todos"/"algunos"/"ninguno" cambian el alcance de una afirmacion.
+
+Complementa a eval/metrics/terminologia.py: aquella mide si el vocabulario del dominio
+sobrevive; esta mide si el SENTIDO sobrevive. Ninguna de las dos se ve en el WER agregado.
 """
 
 import re
-import unicodedata
 from collections import Counter
 from dataclasses import asdict, dataclass
 
+import jiwer
+
 NEGACIONES = {
-    "no", "ni", "nunca", "jamas", "jamás", "nada", "nadie", "ningun", "ningún",
-    "ninguna", "ninguno", "tampoco", "sin",
+    "no", "ni", "nunca", "jamas", "jamás", "tampoco", "nada", "nadie", "ninguno",
+    "ninguna", "ningun", "ningún", "sin",
 }
 
-_DIGITOS = re.compile(r"\d+")
-_PALABRA = re.compile(r"[\wáéíóúüñ]+", re.IGNORECASE | re.UNICODE)
+CUANTIFICADORES = {
+    "todo", "toda", "todos", "todas", "algun", "algún", "alguna", "algunos", "algunas",
+    "poco", "poca", "pocos", "pocas", "mucho", "mucha", "muchos", "muchas",
+    "siempre", "solo", "sólo", "unicamente", "únicamente", "mayoria", "mayoría",
+    "minoria", "minoría", "cada", "ambos", "ambas",
+}
+
+NUMEROS_PALABRA = {
+    "cero", "uno", "una", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho",
+    "nueve", "diez", "once", "doce", "trece", "catorce", "quince", "veinte", "treinta",
+    "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa", "cien",
+    "ciento", "mil", "millon", "millón", "millones", "primero", "segundo", "tercero",
+    "mitad", "doble", "triple", "por ciento", "porciento",
+}
+
+_DIGITO = re.compile(r"\d")
+
+#: Valor numerico de las palabras-numero de una sola pieza. Permite comparar 'cuarenta'
+#: con '40' y no contarlo como error: el modelo escribe cifra donde la referencia escribe
+#: letra, pero acerto el numero. Sin esto la categoria "numeral" mide formato, no errores
+#: (mismo artefacto que R11 con las tildes).
+_VALORES = {
+    "cero": 0, "uno": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5,
+    "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10, "once": 11, "doce": 12,
+    "trece": 13, "catorce": 14, "quince": 15, "dieciseis": 16, "diecisiete": 17,
+    "dieciocho": 18, "diecinueve": 19, "veinte": 20, "treinta": 30, "cuarenta": 40,
+    "cincuenta": 50, "sesenta": 60, "setenta": 70, "ochenta": 80, "noventa": 90,
+    "cien": 100, "ciento": 100, "mil": 1000, "millon": 1_000_000, "millón": 1_000_000,
+}
+
+
+def valor_numerico(palabra: str) -> int | None:
+    """Valor de un numeral escrito en cifra o en letra. None si no lo es."""
+    p = palabra.lower()
+    if p in _VALORES:
+        return _VALORES[p]
+    solo_digitos = re.sub(r"\D", "", p)
+    return int(solo_digitos) if solo_digitos and p.replace(".", "").replace(",", "").isdigit() else None
+
+
+def equivalentes(ref: str, hip: str) -> bool:
+    """True si ambas palabras son el mismo numero escrito de forma distinta."""
+    va, vb = valor_numerico(ref), valor_numerico(hip)
+    return va is not None and va == vb
+
+
+def categoria(palabra: str) -> str | None:
+    """Categoria critica de una palabra, o None si no lo es."""
+    p = palabra.lower()
+    if p in NEGACIONES:
+        return "negacion"
+    if _DIGITO.search(p) or p in NUMEROS_PALABRA:
+        return "numeral"
+    if p in CUANTIFICADORES:
+        return "cuantificador"
+    return None
 
 
 @dataclass
 class ResultadoCriticos:
-    negaciones_ref: int
-    negaciones_perdidas: int
-    negaciones_anadidas: int
-    numeros_ref: int
-    numeros_perdidos: int
-    nombres_ref: int
-    nombres_perdidos: int
+    tasa_error: float
+    tokens_criticos: int
+    errores: int
+    por_categoria: dict[str, dict[str, int]]
     ejemplos: list[str]
 
-    @property
-    def tasa_negacion(self) -> float:
-        """Proporcion de negaciones de la referencia que NO se reproducen."""
-        return self.negaciones_perdidas / self.negaciones_ref if self.negaciones_ref else 0.0
-
-    @property
-    def tasa_numeros(self) -> float:
-        return self.numeros_perdidos / self.numeros_ref if self.numeros_ref else 0.0
-
-    @property
-    def tasa_nombres(self) -> float:
-        return self.nombres_perdidos / self.nombres_ref if self.nombres_ref else 0.0
-
     def como_dict(self):
-        d = asdict(self)
-        d |= {"tasa_negacion": self.tasa_negacion, "tasa_numeros": self.tasa_numeros,
-              "tasa_nombres": self.tasa_nombres}
-        return d
+        return asdict(self)
 
     def __str__(self):
-        return (f"negaciones perdidas={self.tasa_negacion:6.2%} "
-                f"({self.negaciones_perdidas}/{self.negaciones_ref}, "
-                f"+{self.negaciones_anadidas} inventadas)  "
-                f"numeros={self.tasa_numeros:6.2%} ({self.numeros_perdidos}/{self.numeros_ref})  "
-                f"nombres={self.tasa_nombres:6.2%} ({self.nombres_perdidos}/{self.nombres_ref})")
-
-
-def _sin_tildes(t: str) -> str:
-    d = unicodedata.normalize("NFD", t.lower())
-    return "".join(c for c in d if unicodedata.category(c) != "Mn")
-
-
-def _nombres_propios(texto_original: str) -> Counter:
-    """Palabras capitalizadas que no abren frase. Heuristica, no analisis morfologico.
-
-    Se aplica al texto SIN normalizar, porque la mayuscula es justo la senal que se usa.
-    Limitacion: no distingue un nombre propio de una palabra capitalizada por error.
-    """
-    cuenta: Counter[str] = Counter()
-    for frase in re.split(r"[.!?]+", texto_original):
-        palabras = _PALABRA.findall(frase.strip())
-        for p in palabras[1:]:            # se salta la primera: siempre va en mayuscula
-            if p[0].isupper() and not p.isupper():
-                cuenta[_sin_tildes(p)] += 1
-    return cuenta
+        partes = " · ".join(
+            f"{c}: {d['errores']}/{d['total']}" for c, d in sorted(self.por_categoria.items()))
+        return f"tasa de error crítico={self.tasa_error:6.2%}  ({partes})"
 
 
 def evaluar(referencias: list[str], hipotesis: list[str],
-            referencias_crudas: list[str] | None = None,
-            hipotesis_crudas: list[str] | None = None,
-            top_ejemplos: int = 10) -> ResultadoCriticos:
-    """Compara referencia e hipotesis en las tres categorias criticas.
+            max_ejemplos: int = 12) -> ResultadoCriticos:
+    """Errores sobre tokens criticos, usando el alineamiento palabra a palabra.
 
-    `referencias` e `hipotesis` deben venir normalizadas (mismo normalizador que el WER).
-    Las versiones *crudas*, si se pasan, se usan solo para detectar nombres propios por
-    capitalizacion; sin ellas esa categoria queda a cero.
+    Los textos deben venir normalizados con el mismo normalizador que el WER.
+
+    La tasa se calcula sobre los tokens criticos de la REFERENCIA: responde a "¿que
+    proporcion del contenido critico que se dijo llega mal o no llega?". Las inserciones
+    (contenido critico que el sistema anade sin que se dijera) se cuentan aparte, porque
+    son un fallo distinto: no es perdida de informacion, es invencion.
     """
-    neg_ref = neg_perdidas = neg_anadidas = 0
-    num_ref = num_perdidos = 0
-    nom_ref = nom_perdidos = 0
+    total = Counter()
+    fallos = Counter()
+    inventados = Counter()
     ejemplos: list[str] = []
 
-    for i, (r, h) in enumerate(zip(referencias, hipotesis)):
-        pr, ph = Counter(r.split()), Counter(h.split())
+    salida = jiwer.process_words(referencias, hipotesis)
 
-        for termino in NEGACIONES:
-            en_ref, en_hip = pr[termino], ph[termino]
-            neg_ref += en_ref
-            if en_hip < en_ref:
-                neg_perdidas += en_ref - en_hip
-                if len(ejemplos) < top_ejemplos:
-                    ejemplos.append(f"negación «{termino}» perdida: «{r[:70]}»")
-            elif en_hip > en_ref:
-                neg_anadidas += en_hip - en_ref
+    for ref, hip, trozos in zip(salida.references, salida.hypotheses, salida.alignments):
+        for palabra in ref:
+            if (c := categoria(palabra)) is not None:
+                total[c] += 1
 
-        cr, ch = Counter(_DIGITOS.findall(r)), Counter(_DIGITOS.findall(h))
-        num_ref += sum(cr.values())
-        for d, n in cr.items():
-            if ch[d] < n:
-                num_perdidos += n - ch[d]
-                if len(ejemplos) < top_ejemplos:
-                    ejemplos.append(f"número «{d}» perdido: «{r[:70]}»")
+        for t in trozos:
+            if t.type == "equal":
+                continue
+            palabras_ref = ref[t.ref_start_idx:t.ref_end_idx]
+            palabras_hip = hip[t.hyp_start_idx:t.hyp_end_idx]
 
-        if referencias_crudas and hipotesis_crudas:
-            nr = _nombres_propios(referencias_crudas[i])
-            nh = _nombres_propios(hipotesis_crudas[i])
-            nom_ref += sum(nr.values())
-            for nombre, n in nr.items():
-                if nh[nombre] < n:
-                    nom_perdidos += n - nh[nombre]
-                    if len(ejemplos) < top_ejemplos:
-                        ejemplos.append(f"nombre «{nombre}» perdido")
+            for i, palabra in enumerate(palabras_ref):
+                if (c := categoria(palabra)) is None:
+                    continue
+                # "cuarenta" -> "40" no es un error de reconocimiento sino de formato.
+                if (c == "numeral" and i < len(palabras_hip)
+                        and equivalentes(palabra, palabras_hip[i])):
+                    continue
+                fallos[c] += 1
+                if len(ejemplos) < max_ejemplos:
+                    destino = palabras_hip[i] if i < len(palabras_hip) else "(omitido)"
+                    ejemplos.append(f"[{c}] {palabra!r} -> {destino!r}")
 
+            # Contenido critico que aparece en la hipotesis sin estar en la referencia.
+            if t.type == "insert":
+                for palabra in palabras_hip:
+                    if (c := categoria(palabra)) is not None:
+                        inventados[c] += 1
+
+    n_total = sum(total.values())
+    n_fallos = sum(fallos.values())
+    por_categoria = {
+        c: {"total": total[c], "errores": fallos[c], "inventados": inventados[c]}
+        for c in set(total) | set(fallos) | set(inventados)
+    }
     return ResultadoCriticos(
-        negaciones_ref=neg_ref, negaciones_perdidas=neg_perdidas,
-        negaciones_anadidas=neg_anadidas,
-        numeros_ref=num_ref, numeros_perdidos=num_perdidos,
-        nombres_ref=nom_ref, nombres_perdidos=nom_perdidos,
-        ejemplos=ejemplos)
+        tasa_error=n_fallos / n_total if n_total else 0.0,
+        tokens_criticos=n_total, errores=n_fallos,
+        por_categoria=por_categoria, ejemplos=ejemplos)

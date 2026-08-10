@@ -107,6 +107,7 @@ tablas:  ## Regenera TODAS las tablas y figuras de la memoria
 	-$(PY) research/eval/report/tabla_corpus.py --decodificacion fallback
 	-$(PY) research/eval/report/tabla_tecnicas.py
 	-$(PY) research/eval/report/anomalias.py --decodificacion fallback
+	-$(PY) research/eval/report/tabla_criticos.py --decodificacion fallback
 	-$(PY) research/eval/report/figura_modelos.py --corpus fleurs_es --decodificacion fallback
 	@echo "Tablas en memoria/tablas/ y figuras en memoria/figuras/"
 

@@ -33,6 +33,7 @@ sys.path.insert(0, str(RAIZ / "research"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from eval.metrics.terminologia import evaluar as evaluar_terminos  # noqa: E402
+from eval.metrics.criticos import evaluar as evaluar_criticos  # noqa: E402
 from eval.metrics.wer import evaluar  # noqa: E402
 from eval.normalizers.basico import basico  # noqa: E402
 from src.trazabilidad import procedencia  # noqa: E402
@@ -188,6 +189,11 @@ def main():
     t_sin = evaluar_terminos(refs, sin_p, terminos_norm)
     t_con = evaluar_terminos(refs, con_p, terminos_norm)
 
+    # Errores que cambian el sentido. El WER agregado los esconde: medido en M0,
+    # con 18.6% de WER se pierde el 28% de las negaciones.
+    c_base = evaluar_criticos(refs, sin_p)
+    c_tec = evaluar_criticos(refs, con_p)
+
     print("=" * 66)
     print(f"  sin prompt : {r_sin}")
     print(f"  con prompt : {r_con}")
@@ -198,6 +204,9 @@ def main():
     if t_sin.terminos_perdidos:
         print("  terminos peor reproducidos (sin prompt): "
               + ", ".join(f"{t}({h}/{r})" for t, r, h in t_sin.terminos_perdidos[:6]))
+    print("-" * 66)
+    print(f"  crítico sin prompt : {c_base}")
+    print(f"  crítico con prompt : {c_tec}")
     print("-" * 66)
     print(f"  diferencia : {delta:+.2f} puntos de WER   (negativo = el prompt ayuda)")
     print(f"  IC 95%     : [{lo * 100:+.2f}, {hi * 100:+.2f}]  (bootstrap sobre clips)")
@@ -219,6 +228,7 @@ def main():
                      "clips_contexto": len(idx_ctx)},
         "metricas": {"sin_prompt": r_sin.como_dict(), "con_prompt": r_con.como_dict()},
         "terminologia": {"sin_prompt": t_sin.como_dict(), "con_prompt": t_con.como_dict()},
+        "criticos": {"sin_prompt": c_base.como_dict(), "con_prompt": c_tec.como_dict()},
         "pareado": {"mejoran": mejor, "empeoran": peor, "sin_cambio": igual,
                     "p_test_signos": p, "delta_wer_pp": delta,
                     "ic95_pp": [lo * 100, hi * 100], "concluyente": concluyente},

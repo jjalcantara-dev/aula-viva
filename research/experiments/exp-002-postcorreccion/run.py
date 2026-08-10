@@ -37,6 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from corrector import construir_mensajes, limpiar  # noqa: E402
 from eval.metrics.terminologia import evaluar as evaluar_terminos  # noqa: E402
+from eval.metrics.criticos import evaluar as evaluar_criticos  # noqa: E402
 from eval.metrics.wer import evaluar  # noqa: E402
 from eval.normalizers.basico import basico  # noqa: E402
 from src.trazabilidad import commit_actual, hash_fichero  # noqa: E402
@@ -148,6 +149,11 @@ def main():
     razon = (sum(len(t.split()) for t in despues) /
              max(1, sum(len(t.split()) for t in antes)))
 
+    # Errores que cambian el sentido. El WER agregado los esconde: medido en M0,
+    # con 18.6% de WER se pierde el 28% de las negaciones.
+    c_base = evaluar_criticos(refs, antes)
+    c_tec = evaluar_criticos(refs, despues)
+
     print("=" * 68)
     print(f"  sin corregir : {r_antes}")
     print(f"  corregido    : {r_despues}")
@@ -158,6 +164,9 @@ def main():
         print(f"  terminologia sin corregir : {t_a}")
         print(f"  terminologia corregida    : {t_d}")
         print("-" * 68)
+    print(f"  crítico sin corregir : {c_base}")
+    print(f"  crítico corregido    : {c_tec}")
+    print("-" * 68)
     print(f"  diferencia   : {delta:+.2f} puntos de WER   (negativo = el LLM ayuda)")
     print(f"  IC 95%       : [{lo * 100:+.2f}, {hi * 100:+.2f}]")
     print(f"  pareado      : {mejor} mejoran, {peor} empeoran, {igual} sin cambio")
@@ -182,6 +191,7 @@ def main():
         "pareado": {"mejoran": mejor, "empeoran": peor, "sin_cambio": igual,
                     "p_test_signos": p, "delta_wer_pp": delta,
                     "ic95_pp": [lo * 100, hi * 100], "concluyente": concluyente},
+        "criticos": {"sin_corregir": c_base.como_dict(), "corregido": c_tec.como_dict()},
         "control": {"razon_longitud": razon, "descartes": dict(motivos)},
     }, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
 

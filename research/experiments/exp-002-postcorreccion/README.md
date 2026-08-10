@@ -36,6 +36,19 @@ texto crece o encoge más de un 50%, si viene vacío, o si el modelo añade come
 **No es un artefacto de tildes** (R11): la degradación se mantiene igual con normalización
 insensible a acentos (+3.32 frente a +3.23).
 
+## Tampoco se salva en la métrica que importa
+
+Se evaluó si la corrección al menos rescataba el contenido crítico (negaciones,
+numerales, cuantificadores), que es lo que el WER esconde:
+
+| Condición | WER | Error crítico | Negaciones falladas |
+|---|---:|---:|---:|
+| Sin corregir | 19.55% | 22.17% | 48/138 |
+| Corregida | 22.77% | **24.10%** | **51/138** |
+
+**Degrada en ambas.** No hay compensación posible: la única cifra que mejora son las
+negaciones inventadas (4 → 3), con números demasiado pequeños para significar nada.
+
 ## Mecanismo: el LLM mejora el texto, no la transcripción
 
 Los peores casos muestran qué está haciendo exactamente:
