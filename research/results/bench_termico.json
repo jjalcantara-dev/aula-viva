@@ -1,0 +1,26 @@
+[
+  {
+    "config": "actual (8 hilos, mel en CPU)",
+    "segundos": 44.9,
+    "hilos": 8,
+    "mel_en_gpu": false,
+    "temp_media": 66.7,
+    "temp_max": 68.6
+  },
+  {
+    "config": "mel en GPU, 8 hilos",
+    "segundos": 45.5,
+    "hilos": 8,
+    "mel_en_gpu": true,
+    "temp_media": 66.6,
+    "temp_max": 68.9
+  },
+  {
+    "config": "mel en GPU, 2 hilos",
+    "segundos": 44.8,
+    "hilos": 2,
+    "mel_en_gpu": true,
+    "temp_media": 67.6,
+    "temp_max": 70.5
+  }
+]

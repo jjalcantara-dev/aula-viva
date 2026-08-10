@@ -1,0 +1,23 @@
+% GENERADO AUTOMATICAMENTE por research/eval/report/tabla_tecnicas.py
+% No editar a mano.
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|l|r|r|r|c|r|c|}
+    \hline
+    \textbf{Técnica} & \textbf{Corpus} & \textbf{WER base} &
+    \textbf{WER téc.} & \textbf{$\Delta$ (pp)} & \textbf{IC 95\%} &
+    \textbf{$p$} & \textbf{Signif.} \\
+    \hline
+    Prompting contextual & \texttt{tedx-es} & 10.15 & 9.96 & -0.19 & [-0.61, +0.00] & 1.000 & No \\
+    Prompting contextual & \texttt{teleconciencia-es} & 18.79 & 19.14 & +0.35 & [-0.52, +1.42] & 0.012 & No \\
+    Prompting contextual & \texttt{voxpopuli-es} & 9.99 & 9.60 & -0.39 & [-1.14, +0.45] & 0.375 & No \\
+    Post-corrección con LLM & \texttt{teleconciencia-es} & 19.55 & 22.77 & +3.23 & [+2.66, +3.84] & 0.000 & Sí \\
+    Post-corrección con LLM & \texttt{voxpopuli-es} & 12.50 & 12.15 & -0.35 & [-1.69, +1.12] & 1.000 & No \\
+    \hline
+\end{tabular}
+\caption{Efecto de cada técnica de adaptación sobre el WER (\%), con diseño pareado.
+$\Delta$ negativo indica mejora. El intervalo de confianza se obtiene por bootstrap
+remuestreando clips; $p$ corresponde al test de signos sobre los clips que cambian.}
+\label{tab:comparativa-tecnicas}
+\end{table}

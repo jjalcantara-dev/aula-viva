@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Accesibilidad.Asr/Accesibilidad.Asr.csproj" />
+    <Project Path="src/Accesibilidad.Core/Accesibilidad.Core.csproj" />
+    <Project Path="src/Accesibilidad.Web/Accesibilidad.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Accesibilidad.Core.Tests/Accesibilidad.Core.Tests.csproj" />
+  </Folder>
+</Solution>

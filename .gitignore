@@ -1,0 +1,57 @@
+# ---- Corpus: el audio NUNCA entra en git ----
+research/corpus/raw/
+research/corpus/processed/
+!research/corpus/manifests/
+!research/corpus/**/.gitkeep
+
+# ---- Modelos y pesos ----
+*.bin
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+models/
+checkpoints/
+
+# ---- Salidas crudas de experimentos (regenerables) ----
+research/experiments/**/results/
+!research/experiments/**/results/.gitkeep
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.ipynb_checkpoints/
+
+# ---- .NET ----
+bin/
+obj/
+*.user
+*.suo
+
+# ---- LaTeX ----
+*.aux
+*.log
+*.toc
+*.lof
+*.lot
+*.out
+*.bbl
+*.blg
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.nav
+*.snm
+*.vrb
+
+# ---- Entorno / SO ----
+.env
+.DS_Store
+*.swp
+.idea/
+.vscode/

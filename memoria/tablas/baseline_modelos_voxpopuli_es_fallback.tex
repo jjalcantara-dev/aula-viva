@@ -1,0 +1,19 @@
+% GENERADO AUTOMATICAMENTE por research/eval/report/tabla_modelos.py
+% No editar a mano: los cambios se pierden en la siguiente regeneracion.
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|r|r|r|r|}
+    \hline
+    \textbf{Modelo} & \textbf{Par.\ (M)} & \textbf{WER (\%)} &
+    \textbf{CER (\%)} & \textbf{RTF} & \textbf{$\times$ tiempo real} \\
+    \hline
+    \texttt{whisper-small} & 242 & 12.01 & 7.73 & 0.051 & 19.4 \\
+    \texttt{whisper-medium} & 764 & 10.44 & 7.15 & 0.124 & 8.1 \\
+    \texttt{whisper-large-v3-turbo} & 809 & 11.53 & 8.70 & 0.060 & 16.6 \\
+    \hline
+\end{tabular}
+\caption{Rendimiento de los modelos Whisper sin adaptar sobre 40 fragmentos
+(8.6 minutos de audio). Normalizacion \texttt{basico}.
+RTF: factor de tiempo real (menor es mejor).}
+\label{tab:baseline-modelos}
+\end{table}
