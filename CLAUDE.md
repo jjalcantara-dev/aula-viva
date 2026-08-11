@@ -28,7 +28,8 @@ make parar         # mata servicios y experimentos sueltos
 make tablas        # regenera TODAS las tablas y figuras de la memoria
 ```
 
-Experimentos: `make baseline`, `make exp-001`, `make exp-002`, `make exp-100`, `make exp-102`.
+Experimentos: `make baseline`, `make exp-001` … `make exp-104`. `make` los lista todos con
+la pregunta que responde cada uno.
 Aceptan variables: `make baseline MODELO=openai/whisper-small CORPUS=tedx_es`.
 
 Una sola prueba de .NET: `cd app && dotnet test --filter "FullyQualifiedName~Solapamiento"`.
@@ -107,6 +108,17 @@ idénticas. Re-verificar si cambia el modelo, la decodificación o la versión d
 **Ninguna cifra se teclea a mano en el LaTeX.** Las tablas y figuras se generan desde
 `research/eval/report/`. Los notebooks (`research/notebooks/`) **consumen** `results/`,
 nunca los producen.
+
+**Todo entrenamiento se verifica por la pérdida antes de evaluarlo.** Debe estar en el
+rango esperado (<1 para Whisper) y **bajar entre épocas**. El primer ajuste con LoRA
+terminó sin errores, guardó su adaptador y produjo métricas evaluables con la pérdida
+estancada en 6,87 y subiendo: el colador descartaba `bos_token_id` (50257) en lugar de
+`decoder_start_token_id` (50258), así que el token de inicio llegaba duplicado. Habría
+concluido que LoRA destroza el modelo, con IC estrecho y p diminuto avalando el artefacto.
+
+**Ajustar el modelo sobre referencias sucias optimiza hacia el error.** Entrenar con
+CIEMPIESS, cuyas referencias omiten tildes, enseñaría al modelo a no acentuar — y medido
+contra esas mismas referencias, el WER *mejoraría*. Por eso exp-003 usa VoxPopuli.
 
 **El WER agregado esconde lo que importa en accesibilidad.** Cuatro casos medidos lo
 confirman: tildes ausentes en las referencias, alucinaciones fluidas, terminología del

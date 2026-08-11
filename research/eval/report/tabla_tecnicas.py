@@ -48,9 +48,18 @@ def cargar() -> list[dict]:
                 "empeoran": par.get("empeoran"),
                 "sin_cambio": par.get("sin_cambio"),
                 "p": par.get("p_test_signos"),
-                "concluyente": par.get("concluyente"),
+                # El veredicto se DERIVA aqui de las cifras guardadas, no se lee del
+                # JSON: los resultados anteriores al endurecimiento del criterio traen la
+                # marca antigua, que bastaba con que el IC excluyera el cero. Recalcularlo
+                # mantiene toda la tabla bajo el mismo criterio sin relanzar experimentos.
                 "palabras": m[clave_base].get("n_palabras_ref"),
             })
+    for f in filas:
+        ic = f["ic"]
+        f["ic_excluye_cero"] = bool(ic) and (ic[1] < 0 or ic[0] > 0)
+        f["signos_confirma"] = f["p"] is not None and f["p"] < 0.05
+        f["concluyente"] = f["ic_excluye_cero"] and f["signos_confirma"]
+        f["discrepan"] = f["ic_excluye_cero"] != f["signos_confirma"]
     return filas
 
 
@@ -76,7 +85,14 @@ def markdown(filas) -> str:
     hay_baja_potencia = False
     for r in filas:
         ic = f"[{r['ic'][0]:+.2f}, {r['ic'][1]:+.2f}]" if r["ic"] else "—"
-        veredicto = "**significativa**" if r["concluyente"] else "no concluyente"
+        if r["concluyente"]:
+            veredicto = "**significativa**"
+        elif r.get("discrepan"):
+            # Una prueba dice que sí y la otra que no: el efecto está en el límite de
+            # detección y afirmar cualquiera de las dos cosas sería forzar el dato.
+            veredicto = "en el límite"
+        else:
+            veredicto = "no concluyente"
         n = r["palabras"] or 0
         # Marcar la potencia insuficiente en lugar de ocultarla: una fila "no
         # concluyente" por falta de muestra no dice lo mismo que una con muestra

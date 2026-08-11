@@ -17,7 +17,29 @@ test de signos e IC 95% por bootstrap sobre clips.
 Salvaguardas del corrector: se descarta la corrección y se conserva el original si el
 texto crece o encoge más de un 50%, si viene vacío, o si el modelo añade comentarios.
 
-## Resultado: la técnica degrada, y de forma significativa
+## Replicación en dos corpus independientes
+
+El resultado se comprobó sobre un segundo corpus con características opuestas, porque el
+primero (CIEMPIESS) tiene referencias con tildes omitidas y podía estar inflando la
+degradación.
+
+| Corpus | Referencias | Variedad | Palabras | WER base | Δ WER | IC 95% | Mejoran/Empeoran |
+|---|---|---|---:|---:|---:|---|---|
+| `teleconciencia_es` | sucias | México | 8.186 | 19.55% | **+3.23** | [+2.66, +3.84] | 12 / 164 |
+| `voxpopuli_es_400` | **verificadas** | Peninsular | 12.951 | 9.63% | **+1.18** | [+0.84, +1.54] | 39 / 130 |
+
+**La degradación replica**: significativa en ambos, mismo signo, intervalos lejos del cero,
+p < 0.0001. El error crítico también empeora en los dos (17.52% → 18.18% en el corpus limpio).
+
+**Pero su magnitud estaba inflada.** Sobre referencias verificadas el efecto es **casi tres
+veces menor** (+1.18 frente a +3.23). Parte de la degradación medida en CIEMPIESS era
+artefacto: el LLM escribe español correcto y una referencia sin tildes lo penaliza por ello.
+
+Conclusión defendible: *la post-corrección con LLM ligero degrada de forma consistente y
+significativa, con un efecto del orden de **1 punto de WER** sobre referencias fiables.*
+La cifra de +3.23 no debe citarse sin la advertencia sobre la calidad de la referencia.
+
+## Detalle sobre `teleconciencia_es` (primera medición)
 
 | | Sin corregir | Corregido | Δ |
 |---|---:|---:|---:|
@@ -35,6 +57,14 @@ texto crece o encoge más de un 50%, si viene vacío, o si el modelo añade come
 
 **No es un artefacto de tildes** (R11): la degradación se mantiene igual con normalización
 insensible a acentos (+3.32 frente a +3.23).
+
+### Advertencia sobre la categoría "numeral"
+
+En `voxpopuli_es_400` los numerales fallan 81 de 282 veces (29%), muy por encima de
+negaciones y cuantificadores. Parte sigue siendo artefacto de formato que la normalización
+por valor no cubre: los numerales compuestos («dos mil once» → «2011», «veinticinco») no
+están en la tabla de valores y se cuentan como error. **Esa cifra debe interpretarse como
+cota superior**, no como tasa real de error numérico.
 
 ## Tampoco se salva en la métrica que importa
 

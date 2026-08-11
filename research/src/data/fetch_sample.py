@@ -58,6 +58,14 @@ FUENTES = {
         nota="Parlamento Europeo. Peninsular, espontaneo formal. Trae 'accent' y "
              "'is_gold_transcript' (referencia verificada a mano).",
     ),
+    # Particion de ENTRENAMIENTO, disjunta de voxpopuli_es (que usa 'test'). La
+    # separacion la garantiza el propio dataset, no una division nuestra: es la forma
+    # mas robusta de descartar fuga entre entrenamiento y evaluacion.
+    "voxpopuli_es_train": dict(
+        ruta="facebook/voxpopuli", config="es", split="train",
+        campo_texto="normalized_text",
+        nota="Parlamento Europeo, particion de entrenamiento. Para ajuste fino (exp-003).",
+    ),
     "mediaspeech_es": dict(
         ruta="ymoslem/MediaSpeech", config="es", split="train",
         campo_texto="sentence",
@@ -66,9 +74,16 @@ FUENTES = {
 }
 
 
-def descargar(nombre: str, n: int) -> int:
+def descargar(nombre: str, n: int, sufijo: str = "") -> int:
+    """El sufijo permite convivir varias muestras de la misma fuente.
+
+    Sin el, ampliar un corpus SOBRESCRIBE su manifiesto y deja irreproducibles todos los
+    resultados anteriores, que siguen apuntando a un fichero cuyo contenido ya es otro.
+    Ocurrio en M0 con teleconciencia_es al pasar de 40 a 1200 clips.
+    """
     cfg = FUENTES[nombre]
-    destino = RAW / nombre
+    etiqueta = f"{nombre}{sufijo}"
+    destino = RAW / etiqueta
     destino.mkdir(parents=True, exist_ok=True)
     MANIFESTS.mkdir(parents=True, exist_ok=True)
 
@@ -85,7 +100,7 @@ def descargar(nombre: str, n: int) -> int:
         crudo = ej["audio"]
         datos = crudo["bytes"] if crudo.get("bytes") else Path(crudo["path"]).read_bytes()
         arr, sr = sf.read(io.BytesIO(datos), dtype="float32")
-        uid = f"{nombre}_{i:04d}"
+        uid = f"{etiqueta}_{i:04d}"
         wav = destino / f"{uid}.wav"
         sf.write(wav, arr, sr)
 
@@ -109,7 +124,7 @@ def descargar(nombre: str, n: int) -> int:
         filas.append(fila)
         print(f"  [{i + 1}/{n}] {uid}  {dur:5.1f}s  {ej[cfg['campo_texto']][:60]}...")
 
-    manifiesto = MANIFESTS / f"{nombre}.jsonl"
+    manifiesto = MANIFESTS / f"{etiqueta}.jsonl"
     with manifiesto.open("w", encoding="utf-8") as f:
         for fila in filas:
             f.write(json.dumps(fila, ensure_ascii=False) + "\n")
@@ -123,10 +138,12 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--n", type=int, default=20, help="clips por fuente")
     ap.add_argument("--fuentes", nargs="*", default=["fleurs_es"], choices=list(FUENTES))
+    ap.add_argument("--sufijo", default="",
+                    help="sufijo del manifiesto, p.ej. _400, para no pisar muestras previas")
     args = ap.parse_args()
 
     for nombre in args.fuentes:
         try:
-            descargar(nombre, args.n)
+            descargar(nombre, args.n, args.sufijo)
         except Exception as e:
             print(f"  [FALLO] {nombre}: {type(e).__name__}: {e}")

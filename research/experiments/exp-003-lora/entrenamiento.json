@@ -1,0 +1,26 @@
+{
+  "experimento": "exp-003-lora/entrenamiento",
+  "procedencia": {
+    "commit": "dcc8dba",
+    "arbol_sucio": true,
+    "manifiesto": "/home/jesus/Documentos/GitHub/TFM-IA/research/corpus/manifests/voxpopuli_es_train.jsonl",
+    "manifiesto_sha256": "b0866009e5f8",
+    "manifiesto_lineas": 1500
+  },
+  "config": {
+    "manifiesto": "/home/jesus/Documentos/GitHub/TFM-IA/research/corpus/manifests/voxpopuli_es_train.jsonl",
+    "modelo": "openai/whisper-medium",
+    "epocas": 2,
+    "lote": 4,
+    "tasa": 0.0001,
+    "rango": 16,
+    "semilla": 42
+  },
+  "parametros_entrenables": 4718592,
+  "perdida_por_epoca": [
+    0.32311324498057364,
+    0.20559713853895664
+  ],
+  "minutos": 15.8,
+  "adaptador_mb": 18.9
+}

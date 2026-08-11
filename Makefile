@@ -13,7 +13,7 @@ PUERTO_ASR := 5601
 
 .DEFAULT_GOAL := ayuda
 .PHONY: ayuda entorno gpu test app asr demo parar corpus baseline \
-        exp-001 exp-002 exp-100 exp-102 exp-103 exp-104 tablas estado limpiar
+        exp-001 exp-002 exp-003 exp-100 exp-102 exp-103 exp-104 tablas estado limpiar
 
 ayuda:  ## Muestra esta ayuda
 	@echo "TFM — atajos disponibles:"
@@ -84,6 +84,10 @@ exp-002:  ## Post-corrección con LLM (requiere transcripciones de baseline)
 	$(PY) research/experiments/exp-002-postcorreccion/run.py \
 	    --transcripciones $(RESULT)/transcripciones_$(subst /,_,$(MODELO))__$(CORPUS)__fallback.jsonl \
 	    --limite $(or $(N),400)
+
+exp-003:  ## Ajuste fino con LoRA: entrena el adaptador y lo evalúa
+	$(PY) research/experiments/exp-003-lora/entrenar.py --epocas $(or $(EPOCAS),2)
+	$(PY) research/experiments/exp-003-lora/run.py
 
 exp-100:  ## Barrido de tamaño de ventana (latencia frente a calidad)
 	$(PY) research/experiments/exp-100-ventana/run.py \

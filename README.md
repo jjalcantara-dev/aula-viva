@@ -30,8 +30,12 @@ investigadora y la ingeniería, tanto en el repositorio como en la defensa.
 |---|---|
 | `exp-000-baseline` | Whisper sin adaptar: referencia de toda la comparativa |
 | `exp-001-prompting` | ¿Ayuda un glosario del dominio como prompt contextual? |
+| `exp-002-postcorreccion` | ¿Puede un LLM local reparar los errores del ASR? |
 | `exp-100-ventana` | ¿Cuánto WER cuesta cada segundo de latencia que se ahorra? |
 | `exp-101-dispositivo` | ¿Cuánto aporta realmente la GPU? |
+| `exp-102-vad` | ¿Conviene cortar por silencios en vez de por reloj? |
+| `exp-103-contexto` | ¿Ayuda arrastrar la transcripción anterior entre ventanas? |
+| `exp-104-ruido` | ¿Cuánto margen acústico necesita el sistema? |
 
 Numeración: `000-099` núcleo investigador, `100+` ingeniería del sistema en vivo.
 
@@ -144,11 +148,63 @@ en vivo, no llega. En GPU hay 8.1× de margen.
 - [x] Búsqueda de corpus y auditoría de calidad de referencia
 - [x] Salto de dominio medido (efecto suelo descartado, R12)
 - [x] Requisito de GPU justificado con medidas (exp-101)
-- [x] Prompting contextual evaluado con potencia estadística (exp-001)
-- [x] Compromiso latencia-calidad medido (exp-100) y deduplicación implementada
-- [x] Aplicación .NET: contrato, motor real, glosario, pruebas
+- [x] Dos técnicas evaluadas con potencia estadística (exp-001, exp-002)
+- [x] Troceado del audio resuelto con datos: exp-100 → exp-102 → exp-103
+- [x] Robustez frente al ruido de aula caracterizada (exp-104)
+- [x] Cuatro capas de evaluación: WER, terminología, anomalías, errores críticos
+- [x] Aplicación .NET con segmentación por silencios y 19 pruebas
 - [ ] **Solicitud de poliMedia enviada** (R1, camino crítico) — `docs/solicitud-polimedia.md`
-- [ ] **Prueba de latencia con micrófono real** — requiere navegador
 - [ ] Protocolo de evaluación congelado (H2) — bloqueado por R15 (sin director)
-- [ ] Post-corrección con LLM y LoRA
-- [ ] Segmentación por silencios (VAD) en la aplicación
+- [ ] Fine-tuning con LoRA (tercera técnica)
+- [x] exp-002 replicado sobre referencias verificadas (`voxpopuli_es_400`)
+
+## La comparativa de técnicas
+
+Tres técnicas, el mismo corpus de referencias verificadas (`voxpopuli_es_400`, 12.951
+palabras), diseño pareado y veredicto que exige que **coincidan** el intervalo de confianza
+por bootstrap y el test de signos.
+
+| Técnica | Δ WER (pp) | IC 95% | Veredicto |
+|---|---:|---|---|
+| Prompting contextual | −0.37 | [−0.76, −0.05] | **Sin efecto** — signos opuestos en dos corpus, pruebas discrepantes |
+| Post-corrección con LLM | +1.18 | [+0.84, +1.54] | **Degrada** — replicado en dos corpus muy distintos |
+| **Fine-tuning con LoRA** | **−1.23** | [−1.75, −0.77] | **Mejora** — única concluyente |
+
+**Solo funciona la que modifica los pesos.** Las dos que actúan sin tocar el modelo no
+aportan, y una perjudica.
+
+Con un matiz que debe declararse: parte de la mejora de LoRA es **alineamiento con la forma
+superficial de la referencia**, no mejor reconocimiento. VoxPopuli escribe los números en
+letra y el ajuste fino aprendió esa convención (162 dígitos → 1). Descontando numerales, el
+error crítico mejora de 7.7% a 6.2%: real, pero modesto.
+
+### Lo que más mejora el sistema no es adaptar el modelo
+
+Comparando las mejoras medidas en los dos núcleos:
+
+| Intervención | Ganancia |
+|---|---:|
+| Cortar el audio por silencios en vez de por reloj (exp-102) | **−7.4 pp** |
+| Ajuste fino con LoRA (exp-003) | −1.23 pp |
+| Prompting contextual (exp-001) | ~0 |
+| Post-corrección con LLM (exp-002) | +1.18 (empeora) |
+
+**Segmentar bien el audio rinde seis veces más que adaptar el modelo**, y a coste de
+cómputo prácticamente nulo. Es contraintuitivo para un trabajo que partía de la premisa de
+que lo interesante estaba en la adaptación.
+
+## Hallazgos que condicionan el diseño
+
+Cuatro casos independientes muestran lo mismo: **el WER agregado esconde justo lo que
+importa en accesibilidad**. Es el hilo argumental del trabajo.
+
+| Hallazgo | Evidencia |
+|---|---|
+| Las referencias públicas están sucias | 5.1 pp del WER en CIEMPIESS son tildes ausentes |
+| Los modelos alucinan de forma fluida | `turbo` emitió «Gracias, señora presidenta» por el contenido real |
+| El sentido se pierde sin que el WER lo note | 18.61% de WER, pero **28% de las negaciones perdidas y 13 inventadas** |
+| La post-corrección con LLM degrada | +1.18 pp de WER sobre referencias verificadas, replicado en dos corpus |
+
+Y en el núcleo aplicado, tres decisiones tomadas con medidas y no por intuición:
+la GPU es requisito (en CPU no llega a tiempo real), cortar por silencios gana 7.4 pp
+sobre cortar por reloj a igual latencia, y arrastrar contexto entre ventanas no aporta.

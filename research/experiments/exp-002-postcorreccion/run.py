@@ -173,8 +173,21 @@ def main():
     print(f"  test signos  : p = {p:.4f}")
     print(f"  razon long.  : {razon:.3f}  ({'reescribe' if razon > 1.05 else 'conserva'})")
     print(f"  descartes    : {dict(motivos)}")
-    concluyente = (lo < 0 and hi < 0) or (lo > 0 and hi > 0)
-    print(f"  veredicto    : {'DIFERENCIA SIGNIFICATIVA' if concluyente else 'NO CONCLUYENTE'}")
+    # El veredicto exige que AMBAS pruebas coincidan. Basar la conclusion solo en el
+    # intervalo de confianza etiqueta como significativo un efecto cuyo IC llega hasta
+    # -0.05 y que el test de signos no confirma (ocurrio con prompting sobre
+    # voxpopuli_es_400). Cuando discrepan, el efecto esta en el limite de deteccion y lo
+    # honesto es no concluir.
+    ic_excluye_cero = (lo < 0 and hi < 0) or (lo > 0 and hi > 0)
+    signos_confirma = p < 0.05
+    concluyente = ic_excluye_cero and signos_confirma
+    if concluyente:
+        veredicto = "DIFERENCIA SIGNIFICATIVA (IC y test de signos coinciden)"
+    elif ic_excluye_cero or signos_confirma:
+        veredicto = "NO CONCLUYENTE (las dos pruebas discrepan: efecto en el limite)"
+    else:
+        veredicto = "NO CONCLUYENTE"
+    print(f"  veredicto    : {veredicto}")
     print("=" * 68)
 
     salida_dir = AQUI / "results"
@@ -190,7 +203,8 @@ def main():
         "metricas": {"sin_corregir": r_antes.como_dict(), "corregido": r_despues.como_dict()},
         "pareado": {"mejoran": mejor, "empeoran": peor, "sin_cambio": igual,
                     "p_test_signos": p, "delta_wer_pp": delta,
-                    "ic95_pp": [lo * 100, hi * 100], "concluyente": concluyente},
+                    "ic95_pp": [lo * 100, hi * 100], "concluyente": concluyente,
+                    "ic_excluye_cero": ic_excluye_cero, "signos_confirma": signos_confirma},
         "criticos": {"sin_corregir": c_base.como_dict(), "corregido": c_tec.como_dict()},
         "control": {"razon_longitud": razon, "descartes": dict(motivos)},
     }, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
