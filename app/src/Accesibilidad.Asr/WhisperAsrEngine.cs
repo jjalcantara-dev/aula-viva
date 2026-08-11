@@ -7,7 +7,7 @@ using Accesibilidad.Core;
 namespace Accesibilidad.Asr;
 
 /// <summary>Ajustes del motor real. Los valores por defecto son un punto de partida, no un óptimo.</summary>
-public sealed class OpcionesWhisper
+public sealed class WhisperOptions
 {
     /// <summary>URL del servicio Python (<c>serving/servidor_asr.py</c>).</summary>
     public string Url { get; set; } = "http://localhost:5601";
@@ -20,15 +20,15 @@ public sealed class OpcionesWhisper
     /// aporta y propaga errores.
     /// </para>
     /// </summary>
-    public OpcionesSegmentacion Segmentacion { get; set; } = new();
+    public SegmentationOptions Segmentation { get; set; } = new();
 
-    /// <summary>Glosario opcional del dominio, como prompt contextual (técnica de exp-001).</summary>
+    /// <summary>Glossary opcional del dominio, como prompt contextual (técnica de exp-001).</summary>
     public string? Prompt { get; set; }
 }
 
 /// <summary>
 /// Motor real: acumula audio hasta encontrar una pausa y envía el segmento al servicio
-/// Python. El corte lo decide <see cref="SegmentadorEnVivo"/>.
+/// Python. El corte lo decide <see cref="LiveSegmenter"/>.
 ///
 /// <para><b>Limitaciones conocidas</b>:</para>
 /// <list type="bullet">
@@ -38,50 +38,54 @@ public sealed class OpcionesWhisper
 /// <item>Sin difusión a varios receptores: haría falta un hub de SignalR dedicado.</item>
 /// </list>
 /// </summary>
-public sealed class MotorAsrWhisper : IMotorAsr
+public sealed class WhisperAsrEngine : IAsrEngine, ISegmentationDiagnostics
 {
     private sealed record Respuesta(
-        [property: JsonPropertyName("texto")] string Texto,
+        [property: JsonPropertyName("texto")] string Text,
         [property: JsonPropertyName("ms_inferencia")] double MsInferencia);
 
     private readonly HttpClient _http;
-    private readonly OpcionesWhisper _opciones;
+    private readonly WhisperOptions _opciones;
+    private LiveSegmenter? _ultimoSegmentador;
 
-    public MotorAsrWhisper(HttpClient http, OpcionesWhisper opciones)
+    public (int BySilence, int ByTimeout) Cuts =>
+        (_ultimoSegmentador?.CutsBySilence ?? 0, _ultimoSegmentador?.CutsByTimeout ?? 0);
+
+    public WhisperAsrEngine(HttpClient http, WhisperOptions opciones)
     {
         _http = http;
         _opciones = opciones;
         _http.BaseAddress ??= new Uri(opciones.Url);
     }
 
-    public string Nombre => $"Whisper vía {_opciones.Url} " +
-                            $"(corte por silencios, máx {_opciones.Segmentacion.MaximoSegundos:0.#}s)";
+    public string Name => $"Whisper vía {_opciones.Url} " +
+                            $"(corte por silencios, máx {_opciones.Segmentation.MaxSeconds:0.#}s)";
 
-    public async IAsyncEnumerable<SegmentoTranscrito> TranscribirAsync(
-        IAsyncEnumerable<FragmentoAudio> fragmentos,
+    public async IAsyncEnumerable<TranscriptSegment> TranscribeAsync(
+        IAsyncEnumerable<AudioChunk> fragmentos,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         var frecuencia = 16_000;
         DateTimeOffset? inicioVentana = null;
         var anterior = string.Empty;
 
-        // Secuencia del PRIMER fragmento que compone la ventana actual, no un contador
+        // Sequence del PRIMER fragmento que compone la ventana actual, no un contador
         // propio de segmentos. El cliente mide la latencia emparejando el subtítulo con
         // el instante en que envió ese fragmento; si el motor numerase sus propios
         // segmentos, el desfase crecería con cada ventana y la latencia medida sería
         // pura ficción.
         long? secuenciaInicial = null;
 
-        SegmentadorEnVivo? segmentador = null;
+        LiveSegmenter? segmentador = null;
 
         await foreach (var fragmento in fragmentos.WithCancellation(ct))
         {
-            frecuencia = fragmento.FrecuenciaMuestreo;
-            segmentador ??= new SegmentadorEnVivo(frecuencia, _opciones.Segmentacion);
-            inicioVentana ??= fragmento.CapturadoEn;
-            secuenciaInicial ??= fragmento.Secuencia;
+            frecuencia = fragmento.SampleRate;
+            segmentador ??= _ultimoSegmentador = new LiveSegmenter(frecuencia, _opciones.Segmentation);
+            inicioVentana ??= fragmento.CapturedAt;
+            secuenciaInicial ??= fragmento.Sequence;
 
-            var segmento = segmentador.Añadir(fragmento.Muestras.Span);
+            var segmento = segmentador.Add(fragmento.Samples.Span);
             if (segmento is null)
                 continue;   // aún no hay pausa ni se ha alcanzado el tope
 
@@ -89,18 +93,18 @@ public sealed class MotorAsrWhisper : IMotorAsr
 
             // Los cortes caen en silencio, así que no debería haber solape; se mantiene
             // la deduplicación como red de seguridad ante cortes forzados por el tope.
-            var texto = Solapamiento.Fusionar(anterior, crudo);
+            var texto = OverlapMerger.Merge(anterior, crudo);
             if (!string.IsNullOrWhiteSpace(crudo)) anterior = crudo;
 
             if (!string.IsNullOrWhiteSpace(texto))
             {
-                yield return new SegmentoTranscrito(
-                    Secuencia: secuenciaInicial.Value,
-                    Texto: texto,
-                    EsParcial: false,
-                    ConceptosClave: [],
-                    CapturadoEn: inicioVentana.Value,
-                    TranscritoEn: DateTimeOffset.UtcNow);
+                yield return new TranscriptSegment(
+                    Sequence: secuenciaInicial.Value,
+                    Text: texto,
+                    IsPartial: false,
+                    KeyConcepts: [],
+                    CapturedAt: inicioVentana.Value,
+                    TranscribedAt: DateTimeOffset.UtcNow);
             }
 
             inicioVentana = null;
@@ -108,13 +112,13 @@ public sealed class MotorAsrWhisper : IMotorAsr
         }
 
         // Cola final: no descartar el último medio segundo de una intervención.
-        if (segmentador?.Vaciar() is { } resto && inicioVentana is { } inicio)
+        if (segmentador?.Flush() is { } resto && inicioVentana is { } inicio)
         {
-            var texto = Solapamiento.Fusionar(
+            var texto = OverlapMerger.Merge(
                 anterior, await EnviarAsync(resto, frecuencia, ct));
             if (!string.IsNullOrWhiteSpace(texto))
             {
-                yield return new SegmentoTranscrito(
+                yield return new TranscriptSegment(
                     secuenciaInicial ?? 0, texto, false, [], inicio, DateTimeOffset.UtcNow);
             }
         }
@@ -130,6 +134,6 @@ public sealed class MotorAsrWhisper : IMotorAsr
         using var respuesta = await _http.PostAsync("/transcribir", contenido, ct);
         respuesta.EnsureSuccessStatusCode();
         var cuerpo = await respuesta.Content.ReadFromJsonAsync<Respuesta>(ct);
-        return cuerpo?.Texto ?? string.Empty;
+        return cuerpo?.Text ?? string.Empty;
     }
 }

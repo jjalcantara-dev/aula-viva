@@ -1,0 +1,395 @@
+@page "/broadcast"
+@page "/"
+@rendermode InteractiveServer
+@using System.Threading.Channels
+@using Accesibilidad.Core
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject IAsrEngine Motor
+@inject Glossary GlosarioInicial
+@inject CaptionSession Sesion
+@inject TeacherAccess Acceso
+
+<PageTitle>Subtítulos en vivo</PageTitle>
+
+<div class="contenedor">
+
+@if (Acceso.IsRequired && !_autorizado)
+{
+    @* Puesto docente protegido. La vista del alumno (/view) sigue abierta: en el aula
+       nadie debe pelearse con una contraseña para poder leer los subtítulos. *@
+    <header class="cabecera"><h1>Puesto del docente</h1></header>
+    <section class="panel">
+        <h2>Clave de acceso</h2>
+        <div class="fila">
+            <input type="password" @bind="_clave" @bind:event="oninput"
+                   @onkeydown="@(e => { if (e.Key == "Enter") Autorizar(); })"
+                   aria-label="Clave del puesto docente"
+                   style="flex:1 1 14rem; font:inherit; padding:.55rem .75rem;
+                          background:var(--fondo); color:var(--texto);
+                          border:1px solid var(--borde); border-radius:8px" />
+            <button class="principal" @onclick="Autorizar">Entrar</button>
+        </div>
+        @if (_claveIncorrecta)
+        {
+            <p class="error" style="margin-top:.75rem">Clave incorrecta.</p>
+        }
+        <p class="ayuda">
+            Solo hace falta para emitir. Los alumnos entran directamente en
+            <a href="/view">/view</a> sin clave.
+        </p>
+    </section>
+}
+else
+{
+    <header class="cabecera">
+        <h1>Subtítulos en vivo</h1>
+        <span class="estado">
+            <span class="punto @(_capturando ? "activo" : "")"></span>
+            @(_capturando ? "Capturando" : "En reposo")
+        </span>
+        <a href="/view" target="_blank" class="motor" style="text-decoration:none">
+            vista de alumno ↗
+        </a>
+        <button class="principal @(_capturando ? "detener" : "")"
+                @onclick="AlternarAsync" disabled="@_ocupado">
+            @(_capturando ? "Stop" : "Start captura")
+        </button>
+    </header>
+
+    @if (!Acceso.IsRequired)
+    {
+        <p class="error" style="border-color:var(--resalte); color:var(--resalte)">
+            <strong>Sin clave de acceso.</strong> Cualquiera en la red local puede emitir.
+            Configura <code>Aula:ClaveDocente</code> antes de usarlo en un aula real.
+        </p>
+    }
+
+    @if (_error is not null)
+    {
+        <p class="error"><strong>Error:</strong> @_error</p>
+    }
+
+    @* ------------------------------------------------ glosario de la sesión -- *@
+    @if (!_capturando)
+    {
+        <section class="panel">
+            <h2>Glossary de la sesión</h2>
+            <textarea @bind="_textoGlosario" @bind:event="oninput"
+                      aria-label="Términos del glosario, uno por línea"
+                      placeholder="Un término por línea. Por ejemplo:&#10;fotosíntesis&#10;mitocondria&#10;cloroplasto"></textarea>
+            <p class="ayuda">
+                Los escribe el docente antes de empezar; se resaltan en los subtítulos para
+                que el alumno no pierda la terminología. Se puede pegar directamente desde
+                el temario. <strong>No se extraen automáticamente</strong>: medido en
+                exp-001, la extracción por frecuencia produce vocabulario corriente que el
+                modelo ya reconoce bien.
+            </p>
+            @if (TerminosActuales.Count > 0)
+            {
+                <div class="etiquetas">
+                    @foreach (var t in TerminosActuales.Take(30))
+                    {
+                        <span class="termino">@t</span>
+                    }
+                    @if (TerminosActuales.Count > 30)
+                    {
+                        <span class="termino">+@(TerminosActuales.Count - 30) más</span>
+                    }
+                </div>
+            }
+        </section>
+    }
+
+    @* ------------------------------------------------------------ subtítulos -- *@
+    <div class="subtitulos" style="--escala: @_escala.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+         aria-live="polite" aria-atomic="false">
+        @if (_segmentos.Count == 0)
+        {
+            <p class="vacio">
+                @(_capturando
+                    ? "Escuchando… los subtítulos aparecerán al detectar una pausa."
+                    : "Pulsa «Start captura» para empezar.")
+            </p>
+        }
+        else
+        {
+            @foreach (var s in _segmentos.TakeLast(10))
+            {
+                <p class="segmento @(s.IsPartial ? "parcial" : "")">
+                    @foreach (var trozo in _glosario.Mark(s.Text))
+                    {
+                        @* Fragment a trozo y escapado por Razor: el texto viene de un modelo
+                           y no debe interpolarse nunca como marcado. *@
+                        if (trozo.IsConcept)
+                        {
+                            <mark>@trozo.Text</mark>
+                        }
+                        else
+                        {
+                            @trozo.Text
+                        }
+                    }
+                    <span class="latencia-seg">@MsD(LatenciaDe(s))</span>
+                </p>
+            }
+        }
+    </div>
+
+    <div class="fila" style="margin-bottom:1rem">
+        <span class="ayuda">Tamaño del texto</span>
+        <button class="discreto" @onclick="() => Escalar(-0.15)" aria-label="Reducir texto">A−</button>
+        <button class="discreto" @onclick="() => Escalar(0.15)" aria-label="Aumentar texto">A+</button>
+        <span class="ayuda">@((_escala * 100).ToString("F0"))%</span>
+        <span style="flex:1"></span>
+        <button class="discreto" @onclick="() => _verMetricas = !_verMetricas">
+            @(_verMetricas ? "Ocultar" : "Ver") métricas
+        </button>
+    </div>
+
+    @* -------------------------------------------------------------- métricas -- *@
+    @if (_verMetricas)
+    {
+        <section class="panel">
+            <h2>Latency y estado</h2>
+            <div class="metricas">
+                <div class="metrica">
+                    <div class="etiqueta">Segmentos</div>
+                    <div class="valor">@_segmentos.Count</div>
+                </div>
+                <div class="metrica">
+                    <div class="etiqueta">Extremo a extremo · mediana</div>
+                    <div class="valor @(PercentilIda(50) > 4000 ? "alerta" : "")">@MsD(PercentilIda(50))</div>
+                </div>
+                <div class="metrica">
+                    <div class="etiqueta">Extremo a extremo · p95</div>
+                    <div class="valor @(PercentilIda(95) > 6000 ? "alerta" : "")">@MsD(PercentilIda(95))</div>
+                </div>
+                <div class="metrica">
+                    <div class="etiqueta">Servidor · mediana</div>
+                    <div class="valor">@Ms(Percentil(50))</div>
+                </div>
+                <div class="metrica">
+                    <div class="etiqueta">Frecuencia</div>
+                    <div class="valor">@(_frecuenciaReal / 1000) kHz</div>
+                </div>
+                <div class="metrica">
+                    <div class="etiqueta">Cortes por pausa / por tope</div>
+                    <div class="valor @(Cortes.ByTimeout > Cortes.BySilence ? "alerta" : "")">
+                        @Cortes.BySilence / @Cortes.ByTimeout
+                    </div>
+                </div>
+            </div>
+            <p class="ayuda">
+                <strong>Cortes por pausa / por tope</strong>: si domina el segundo, el
+                detector de silencios no está encontrando las pausas y el sistema acaba
+                troceando por reloj — la peor opción según exp-102. Suele deberse al
+                control automático de ganancia del navegador.
+            </p>
+            <p class="ayuda">
+                <strong>Extremo a extremo</strong>: medido por el navegador con un solo
+                reloj — incluye red, servidor, motor y pintado. Es lo que espera el alumno.
+                <strong>Servidor</strong>: desde que llega el primer fragmento del segmento
+                hasta que sale el texto; incluye la espera a que el hablante haga una pausa.
+            </p>
+            <p class="motor">@Motor.Name · preprocesado del navegador:
+                @(PreprocesadoNavegador ? "activo" : "desactivado")</p>
+        </section>
+    }
+}
+</div>
+
+@code {
+    // 500 ms por fragmento: el corte real lo decide el segmentador por silencios
+    // (exp-102), no este valor. Solo fija cada cuánto llega audio al servidor.
+    private const int MsPorFragmento = 500;
+    private const int FrecuenciaDeseada = 16_000;
+
+    // Preprocesado de audio del navegador. Se deja activo porque es lo que encontrará un
+    // centro educativo por defecto, pero su efecto sobre el ASR está sin medir.
+    private const bool PreprocesadoNavegador = true;
+
+    // Desactivado: el control automático de ganancia impide detectar las pausas.
+    private const bool GananciaAutomatica = false;
+
+    private readonly List<TranscriptSegment> _segmentos = [];
+    /// <summary>Latencias de extremo a extremo medidas por el navegador, en ms.</summary>
+    private readonly List<double> _idaYVuelta = [];
+    /// <summary>Latency por secuencia de segmento, para mostrarla junto a su texto.</summary>
+    private readonly Dictionary<long, double> _latenciaPorSegmento = [];
+
+    private IJSObjectReference? _modulo;
+    private DotNetObjectReference<Broadcast>? _referencia;
+    private Channel<AudioChunk>? _canal;
+    private CancellationTokenSource? _cts;
+    private Task? _bombeo;
+
+    private bool _capturando, _ocupado, _verMetricas;
+    private string? _error;
+    private int _frecuenciaReal = FrecuenciaDeseada;
+    private double _escala = 1.0;
+
+    private string _clave = "";
+    private bool _autorizado, _claveIncorrecta;
+
+    private string _textoGlosario = "";
+    private Glossary _glosario = new([]);
+
+    private List<string> TerminosActuales =>
+        _textoGlosario.Split(['\n', '\r', ','], StringSplitOptions.RemoveEmptyEntries)
+                      .Select(t => t.Trim()).Where(t => t.Length > 0).Distinct().ToList();
+
+    protected override void OnInitialized()
+    {
+        // El glosario configurado sirve de punto de partida; el docente lo ajusta
+        // por sesión desde la interfaz, que es donde sabe qué va a explicar hoy.
+        _textoGlosario = string.Join('\n', GlosarioInicial.Terms);
+        _glosario = new Glossary(TerminosActuales);
+    }
+
+    private void Autorizar()
+    {
+        _autorizado = Acceso.Verify(_clave);
+        _claveIncorrecta = !_autorizado;
+        _clave = "";   // no dejarla en memoria del componente más de lo necesario
+    }
+
+    private void Escalar(double delta) => _escala = Math.Clamp(_escala + delta, 0.7, 2.5);
+
+    private (int BySilence, int ByTimeout) Cortes =>
+        Motor is ISegmentationDiagnostics d ? d.Cuts : (0, 0);
+
+    private double LatenciaDe(TranscriptSegment s) =>
+        _latenciaPorSegmento.TryGetValue(s.Sequence, out var ms) ? ms : -1;
+
+    private async Task AlternarAsync()
+    {
+        _ocupado = true;
+        _error = null;
+        try
+        {
+            if (_capturando) await DetenerAsync();
+            else await IniciarAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _capturando = false;
+        }
+        finally { _ocupado = false; }
+    }
+
+    private async Task IniciarAsync()
+    {
+        _segmentos.Clear();
+        _idaYVuelta.Clear();
+        _latenciaPorSegmento.Clear();
+        // El glosario se congela al empezar: cambiarlo a mitad de clase haría que los
+        // subtítulos ya emitidos y los nuevos se resaltaran con criterios distintos.
+        _glosario = new Glossary(TerminosActuales);
+        // Abre la sesión: a partir de aquí los alumnos conectados a /ver reciben todo.
+        Sesion.Start(_glosario);
+
+        // Descarta lo más viejo: en subtitulado en vivo es preferible perder audio
+        // antiguo a acumular retardo indefinido.
+        _canal = Channel.CreateBounded<AudioChunk>(
+            new BoundedChannelOptions(64) { FullMode = BoundedChannelFullMode.DropOldest });
+
+        _cts = new CancellationTokenSource();
+        _bombeo = ConsumirAsync(_cts.Token);
+
+        _modulo ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/captura-audio.js");
+        _referencia ??= DotNetObjectReference.Create(this);
+
+        _frecuenciaReal = await _modulo.InvokeAsync<int>(
+            "iniciar", _referencia, FrecuenciaDeseada, MsPorFragmento,
+            PreprocesadoNavegador, GananciaAutomatica);
+
+        _capturando = true;
+    }
+
+    private async Task DetenerAsync()
+    {
+        if (_modulo is not null) await _modulo.InvokeVoidAsync("detener");
+        _canal?.Writer.TryComplete();
+        if (_cts is not null) await _cts.CancelAsync();
+        if (_bombeo is not null)
+        {
+            try { await _bombeo; } catch (OperationCanceledException) { }
+        }
+        _capturando = false;
+        Sesion.Stop();
+    }
+
+    /// <summary>Llamado desde JS por cada bloque de PCM capturado.</summary>
+    /// <param name="secuencia">
+    /// La asigna el CLIENTE: es la única forma de emparejar cada subtítulo con el instante
+    /// en que salió su audio y cerrar la medida de latencia con un solo reloj.
+    /// </param>
+    [JSInvokable]
+    public void RecibirFragmento(long secuencia, byte[] pcm)
+    {
+        _canal?.Writer.TryWrite(new AudioChunk(
+            Sequence: secuencia,
+            Samples: pcm,
+            SampleRate: _frecuenciaReal,
+            // Marca del servidor: mide el tiempo de SERVIDOR, no la latencia de extremo
+            // a extremo (esa la cierra el navegador).
+            CapturedAt: DateTimeOffset.UtcNow));
+    }
+
+    private async Task ConsumirAsync(CancellationToken ct)
+    {
+        var fuente = _canal!.Reader.ReadAllAsync(ct);
+        await foreach (var segmento in Motor.TranscribeAsync(fuente, ct))
+        {
+            _segmentos.Add(segmento);
+            Sesion.Publish(segmento);   // difunde a los alumnos conectados
+            await InvokeAsync(StateHasChanged);
+
+            // Después de pintar: así el número incluye el renderizado, que es lo que el
+            // alumno realmente espera.
+            if (_modulo is not null)
+            {
+                var ms = await _modulo.InvokeAsync<double>("marcarRecibido", segmento.Sequence);
+                if (ms >= 0)
+                {
+                    _idaYVuelta.Add(ms);
+                    _latenciaPorSegmento[segmento.Sequence] = ms;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+    }
+
+    private TimeSpan Percentil(int p)
+    {
+        if (_segmentos.Count == 0) return TimeSpan.Zero;
+        var ordenadas = _segmentos.Select(s => s.Latency).Order().ToList();
+        var i = Math.Clamp((int)Math.Ceiling(p / 100.0 * ordenadas.Count) - 1, 0, ordenadas.Count - 1);
+        return ordenadas[i];
+    }
+
+    private double PercentilIda(int p)
+    {
+        if (_idaYVuelta.Count == 0) return -1;
+        var ordenadas = _idaYVuelta.Order().ToList();
+        var i = Math.Clamp((int)Math.Ceiling(p / 100.0 * ordenadas.Count) - 1, 0, ordenadas.Count - 1);
+        return ordenadas[i];
+    }
+
+    private static string Ms(TimeSpan t) => $"{t.TotalMilliseconds:F0} ms";
+
+    private static string MsD(double ms) => ms < 0 ? "—" : $"{ms:F0} ms";
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await DetenerAsync(); } catch { /* la página se está cerrando */ }
+        _referencia?.Dispose();
+        if (_modulo is not null)
+        {
+            try { await _modulo.DisposeAsync(); } catch (JSDisconnectedException) { }
+        }
+        _cts?.Dispose();
+    }
+}

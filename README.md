@@ -77,16 +77,36 @@ Requiere el runtime de ASP.NET Core (en Arch/CachyOS no viene con el SDK):
 
 ```bash
 sudo pacman -S aspnet-runtime-10.0 aspnet-targeting-pack-10.0   # una sola vez
-cd app && dotnet run --project src/Accesibilidad.Web
+make demo          # servicio ASR + app, con las direcciones impresas al arrancar
+make demo-lora     # igual, pero con el adaptador de exp-003 (técnica ganadora)
+make app           # solo la app, con motor simulado (mide la latencia del circuito)
 ```
 
-Página de subtitulado: `http://localhost:5203/subtitulos` (el puerto lo fija
-`Properties/launchSettings.json`, que tiene prioridad sobre `ASPNETCORE_URLS`).
+### Topología: un emisor, muchos receptores
 
-El motor por defecto es `MotorAsrSimulado`: **no reconoce nada**. Devuelve texto fijo para
-medir la latencia del circuito —micrófono, red, servidor, render— sin la contribución del
-modelo. La página muestra mediana y p95. La captura del micrófono necesita un contexto
-seguro; `localhost` cuenta como tal.
+| Ruta | Quién | Qué hace |
+|---|---|---|
+| `/broadcast` | **Docente** | Captura el micrófono, fija el glosario, ve las métricas |
+| `/view` | **Alumnado** | Solo muestra. No captura ni ejecuta el modelo |
+
+El servidor transcribe **una vez para toda el aula**, con independencia del número de
+alumnos conectados. Un diseño donde cada cliente transcribiera necesitaría una GPU por
+alumno.
+
+```
+DOCENTE  http://localhost:5203/broadcast     ← el micrófono solo funciona en localhost sin HTTPS
+ALUMNOS  http://<ip-del-equipo>:5203/view    ← desde el móvil, en la misma red
+```
+
+### Restricciones de acceso
+
+- **Solo red local**: se rechaza con 403 cualquier conexión que no venga de una red
+  privada. Se difunde audio de aula con voces identificables, así que la restricción la
+  impone la aplicación y no la configuración del router (`Aula:SoloRedLocal`).
+- **Clave del puesto docente** (`Aula:ClaveDocente`): protege `/broadcast`. Sin configurar,
+  la propia página advierte de que cualquiera en la red puede emitir.
+- El cortafuegos del equipo debe permitir el puerto:
+  `sudo ufw allow from 192.168.1.0/24 to any port 5203 proto tcp`
 
 ## Resultados de M0
 

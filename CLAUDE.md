@@ -10,9 +10,21 @@ TFM del Máster en IA de UNIR (modalidad individual). Dos núcleos que se evalú
   Whisper al dominio educativo en español. Vive en `research/`.
 - **Núcleo aplicado (Tipo 2)**: aplicación .NET de subtitulado en vivo. Vive en `app/`.
 
-El idioma del proyecto es el **español**: identificadores, comentarios, documentación y
-salida por consola. En fuentes Python los comentarios van **sin tildes** (evita problemas
-de codificación en entornos mixtos); en C# y en Markdown sí se acentúa.
+### Convención de idioma
+
+**Identificadores en inglés, comentarios y documentación en español.** Es la combinación
+habitual en equipos hispanohablantes: el código se lee como código y la explicación en el
+idioma del autor.
+
+- `app/` (C#) y los endpoints ya siguen la convención: `IAsrEngine`, `AudioChunk`,
+  `CaptionSession`, `/broadcast`, `/view`.
+- `research/` (Python) **sigue en español** de forma deliberada: sus nombres aparecen en
+  el `Makefile`, en los README de cada experimento y en las claves de los ~40 JSON de
+  resultados ya generados. Renombrarlos rompería la reproducibilidad de resultados ya
+  medidos a cambio de consistencia estética. Es una deuda declarada, no un descuido.
+- La salida por consola y la interfaz van en español (el usuario final es un docente).
+- En fuentes Python los comentarios van **sin tildes** (evita problemas de codificación en
+  entornos mixtos); en C# y en Markdown sí se acentúa.
 
 ## Comandos
 
@@ -38,6 +50,23 @@ El intérprete es `.venv/bin/python`, creado con `--system-site-packages` **a pr
 torch con ROCm está instalado a nivel de sistema y reinstalarlo en el venv rompe la GPU.
 
 ## Arquitectura
+
+### Topología del sistema
+
+Un emisor y muchos receptores, con **todo el cálculo en el servidor**:
+
+- `/broadcast` — puesto del **docente**. Captura el micrófono y difunde. Protegido por
+  `Aula:ClaveDocente` si está configurada.
+- `/view` — pantalla del **alumnado**. Solo muestra; no captura, no ejecuta el modelo.
+  Deliberadamente abierta: nadie debe pelearse con una contraseña para leer subtítulos.
+
+`CaptionSession` (singleton) mantiene la clase en curso y difunde por los websockets que
+Blazor ya tiene con cada cliente; no hace falta un hub de SignalR aparte. El modelo
+transcribe **una vez para toda el aula**, con independencia del número de alumnos.
+
+**Solo red local.** `LocalNetworkOnly` rechaza con 403 cualquier conexión que no venga de
+una red privada. Se difunde audio de aula con voces identificables, así que no basta con
+no abrir el puerto del router: la restricción la impone la propia aplicación.
 
 ### La frontera entre investigación y aplicación
 
@@ -119,6 +148,19 @@ concluido que LoRA destroza el modelo, con IC estrecho y p diminuto avalando el 
 **Ajustar el modelo sobre referencias sucias optimiza hacia el error.** Entrenar con
 CIEMPIESS, cuyas referencias omiten tildes, enseñaría al modelo a no acentuar — y medido
 contra esas mismas referencias, el WER *mejoraría*. Por eso exp-003 usa VoxPopuli.
+
+**El preprocesado del navegador no es neutro.** El control automático de ganancia
+**sabotea la segmentación por silencios**: al callar el hablante sube la ganancia,
+amplifica el ruido de fondo y la energía nunca baja. Medido en uso real, con AGC activo
+casi todos los segmentos se cerraban por agotar el tope en vez de por pausa. Va
+desactivado, y la interfaz muestra el recuento de cortes por pausa frente a por tope para
+que el fallo sea visible.
+
+**Los decoradores rompen las comprobaciones de tipo.** `HighlightingAsrEngine` envuelve al
+motor real, así que un `is WhisperAsrEngine` desde `IAsrEngine` **nunca se cumple**. El
+diagnóstico de segmentación estuvo devolviendo ceros por esto. Cualquier capacidad
+opcional va en su propia interfaz (`ISegmentationDiagnostics`) que los decoradores
+reenvían.
 
 **El WER agregado esconde lo que importa en accesibilidad.** Cuatro casos medidos lo
 confirman: tildes ausentes en las referencias, alucinaciones fluidas, terminología del

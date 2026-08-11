@@ -1,0 +1,117 @@
+\chapter{Conclusiones y Trabajo Futuro}
+\label{cap:conclusiones}
+
+\section{Conclusiones}
+
+\subsection{Sobre las técnicas de adaptación}
+
+De las tres técnicas evaluadas, solo mejora la que modifica los pesos del modelo. El
+ajuste fino con LoRA reduce el error 1,23 puntos con ambos criterios estadísticos de
+acuerdo; el prompting contextual no produce efecto detectable, con signo distinto en cada
+corpus y pruebas que discrepan entre sí; y la post-corrección con un modelo de lenguaje
+local lo empeora de forma significativa y replicada.
+
+La conclusión sobre la post-corrección merece detenerse, porque contradice la intuición
+del campo. Un modelo de lenguaje debería poder reparar errores de reconocimiento usando el
+contexto, y sin embargo degrada. El mecanismo observado explica por qué: el corrector
+optimiza la calidad del texto como pieza escrita, sustituyendo palabras por sinónimos más
+precisos y corrigiendo la gramática del hablante, mientras que una transcripción debe
+reflejar lo dicho. Son objetivos en conflicto, y el modelo optimiza el que le corresponde
+por entrenamiento.
+
+Sobre LoRA cabe un matiz que conviene no omitir: buena parte de su mejora consiste en
+aprender la convención de escritura del corpus de ajuste, no en reconocer mejor el audio.
+Descontado ese efecto, la ganancia sigue existiendo pero es modesta.
+
+\subsection{Sobre dónde está realmente el margen de mejora}
+
+El resultado más relevante del trabajo no procede de la comparativa de técnicas sino de su
+comparación con las decisiones de ingeniería del sistema. Segmentar el audio por silencios
+en lugar de por reloj reduce el error 7,4 puntos a igual latencia media; seis veces más que
+la mejor de las técnicas de adaptación, y a coste de cómputo prácticamente nulo.
+
+Esto invierte la premisa de la que partía el trabajo. Se asumía que el margen estaba en
+adaptar el modelo al dominio educativo; los datos indican que, con los modelos actuales, el
+margen está en cómo se le entrega el audio. Un sistema de subtitulado en vivo que trocee
+mal desperdicia más calidad de la que cualquier técnica de adaptación puede recuperar.
+
+\subsection{Sobre la evaluación}
+
+La tasa de error de palabra es insuficiente para valorar un sistema de accesibilidad, y el
+trabajo aporta cuatro evidencias independientes de ello. La más contundente: con un 18,61\%
+de error, cifra que suena aceptable, el sistema pierde o altera el 28\% de las negaciones e
+introduce trece que nadie pronunció. Un alumno con discapacidad auditiva lee entonces lo
+contrario de lo explicado, sin ninguna señal de que algo falla.
+
+De ahí se derivan dos instrumentos que se proponen como complemento: una métrica de
+cobertura y precisión sobre la terminología del dominio, y otra que contabiliza los errores
+sobre negaciones, numerales y cuantificadores. Ambas detectan efectos que el WER agregado
+no muestra, y en un caso concreto invierten la valoración de una técnica.
+
+\subsection{Sobre la validez de las mediciones}
+
+Cinco incidentes documentados en la sección~\ref{sec:incidentes} comparten una
+característica: en todos ellos el sistema seguía funcionando y produciendo cifras
+verosímiles. Ninguno se manifestó como un error.
+
+La conclusión práctica es que un procedimiento experimental en este campo necesita
+comprobaciones que no forman parte del procedimiento habitual: verificar que la función de
+pérdida esté en el rango esperado antes de evaluar un modelo ajustado; auditar a mano una
+muestra de las referencias antes de adoptar un corpus; incorporar la configuración de
+decodificación a la identidad del resultado; y registrar el contenido exacto del corpus
+empleado, no solo su nombre.
+
+\section{Limitaciones}
+\label{sec:limitaciones}
+
+\textbf{Ninguno de los corpus es una clase real.} Es la limitación de fondo. Los materiales
+empleados se aproximan al registro de una clase magistral, pero ninguno lo es. Las
+conclusiones sobre adaptación al dominio educativo son, en rigor, conclusiones sobre
+adaptación a los dominios sustitutos disponibles. El corpus objetivo, un repositorio
+universitario con transcripciones manuales, requiere una solicitud institucional que quedó
+cursada sin resolución dentro del plazo de este trabajo.
+
+\textbf{Los resultados miden implementaciones, no técnicas.} Se hizo evidente con la
+post-corrección: una primera versión de las instrucciones dejaba la técnica inerte, y otra
+la activaba. Un prompt distinto, un modelo mayor o un ajuste de hiperparámetros podrían
+alterar las conclusiones.
+
+\textbf{El detector de actividad de voz es de energía.} Un detector entrenado sería más
+robusto frente al ruido de aula, y la práctica del sector indica que la combinación de
+ambos reduce sustancialmente las falsas activaciones. La medición realizada justifica
+introducirlo, pero no se ha implementado.
+
+\textbf{El ruido se añadió de forma sintética.} Falta la reverberación, que es un factor
+independiente y posiblemente más dañino que el ruido aditivo en un aula real.
+
+\textbf{La aplicación no se ha evaluado con usuarios.} Se ha verificado su funcionamiento
+técnico y se ha medido su latencia, pero no se ha comprobado si el resultado es útil para
+quien debe leerlo.
+
+\textbf{El sistema depende de un único servidor.} La difusión se resuelve en memoria, lo
+que ata el despliegue a un proceso. Escalar a varios exigiría una infraestructura
+adicional; para un aula no aplica, pero condiciona cualquier extensión a nivel de centro.
+
+\section{Trabajo futuro}
+
+\textbf{Corpus educativo real.} Es la continuación prioritaria: repetir la comparativa
+sobre clases grabadas convertiría las conclusiones actuales, obtenidas sobre dominios
+sustitutos, en conclusiones sobre el dominio objetivo.
+
+\textbf{Detección de actividad de voz entrenada.} La segmentación resultó ser la palanca
+más eficaz del sistema, y actualmente se apoya en el método más simple posible. Mejorarla
+es la vía con mayor rendimiento esperable por unidad de esfuerzo.
+
+\textbf{Glosario procedente del material docente.} La extracción automática por frecuencia
+produce vocabulario corriente que el modelo ya reconoce. Un glosario elaborado a partir del
+temario o las transparencias tendría el contenido que la técnica necesita, y permitiría
+reevaluar el prompting en condiciones justas.
+
+\textbf{Métricas de comprensión.} Las métricas propuestas miden la supervivencia de
+unidades léxicas concretas. El paso siguiente sería medir si el alumno entiende lo mismo
+leyendo la transcripción que escuchando la clase, lo que exige evaluación con personas.
+
+\textbf{Implementaciones optimizadas para inferencia.} Existen variantes del modelo
+significativamente más rápidas que la empleada, cuyo soporte para la plataforma de cálculo
+utilizada en este trabajo era limitado. Su viabilidad debería reevaluarse, porque el margen
+de latencia condiciona directamente la usabilidad en aula.

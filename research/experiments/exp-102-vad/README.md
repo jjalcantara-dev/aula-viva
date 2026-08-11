@@ -76,6 +76,33 @@ exacta depende de qué se priorice:
 🔴 **DIRECTOR: confirmar que la segmentación por silencios entra en el alcance del núcleo
 aplicado, y si el criterio es la latencia media o el peor caso.**
 
+## Contraste con la práctica del sector y con el uso real
+
+**Coincide**: trocear en 5-10 s con solapamiento y usar VAD para detectar fin de
+intervención es lo recomendado habitualmente para Whisper en streaming.
+
+**Discrepa en el umbral**: la práctica común usa **600 ms** de silencio para dar por
+terminada una intervención; aquí se midió mejor con **300 ms**. La diferencia probable es
+el material: VoxPopuli es discurso parlamentario con pausas marcadas. Si en aula real se
+observan cortes en mitad de sintagma, subirlo es lo indicado.
+
+**Mejora pendiente identificada por el sector**: un VAD entrenado (Silero) combinado con
+filtrado por energía reduce las falsas activaciones alrededor de un 34% frente a un
+detector de energía puro como el de este experimento.
+
+### Lo que apareció al llevarlo a la aplicación en vivo
+
+El detector **no disparaba casi nunca**: en la primera prueba con micrófono real,
+prácticamente todos los segmentos se cerraron por agotar el tope de 8 s en lugar de por
+pausa. La causa no era el algoritmo sino el **control automático de ganancia del
+navegador**: al callar el hablante, el AGC sube la ganancia, amplifica el ruido de fondo y
+la energía nunca desciende lo suficiente.
+
+Es un efecto que el experimento offline no podía detectar, porque allí el audio llega ya
+grabado y sin procesar. **Desactivar el AGC es requisito para que la segmentación por
+silencios funcione**, y la aplicación ahora muestra el recuento de cortes por pausa frente
+a cortes por tope para que el problema sea visible en lugar de silencioso.
+
 ## Limitaciones
 
 - Detector de energía, no entrenado. Con ruido de aula real (proyector, sillas, murmullo)

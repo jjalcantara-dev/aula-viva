@@ -11,6 +11,7 @@
 | `whisper-medium` | `mediaspeech_es` | 14.72% | **18.18%** | 6/23 | 10/41 | 0/24 |
 | `whisper-medium` | `tedx_es` | 10.22% | **12.73%** | 2/16 | 5/26 | 0/13 |
 | `whisper-medium` | `teleconciencia_es` | 18.61% | **20.23%** | 134/477 | 99/459 | 34/384 |
+| `whisper-medium` | `voxpopuli_es_400` | 9.63% | **17.52%** | 11/168 | 81/282 | 14/155 |
 | `whisper-medium` | `voxpopuli_es` | 10.44% | **4.35%** | 0/21 | 2/29 | 1/19 |
 | `whisper-small` | `fleurs_es` | 6.61% | **3.70%** | 0/6 | 0/14 | 1/7 |
 | `whisper-small` | `mediaspeech_es` | 15.94% | **18.18%** | 5/23 | 11/41 | 0/24 |
@@ -28,5 +29,6 @@ El fallo más grave posible: el sistema introduce una negación que nadie dijo, 
 - `whisper-large-v3-turbo`/`teleconciencia_es`: **2 negaciones inventadas** (el sistema niega algo que no se negó)
 - `whisper-medium`/`mediaspeech_es`: **2 negaciones inventadas** (el sistema niega algo que no se negó)
 - `whisper-medium`/`teleconciencia_es`: **13 negaciones inventadas** (el sistema niega algo que no se negó)
+- `whisper-medium`/`voxpopuli_es_400`: **1 negaciones inventadas** (el sistema niega algo que no se negó)
 - `whisper-tiny`/`fleurs_es`: **1 negaciones inventadas** (el sistema niega algo que no se negó)
 

@@ -108,6 +108,8 @@ def main():
     ap.add_argument("--puerto", type=int, default=5601)
     ap.add_argument("--idioma", default="es")
     ap.add_argument("--dtype", default="float16")
+    ap.add_argument("--adaptador", default=None,
+                    help="ruta a un adaptador LoRA (research/experiments/exp-003-lora/adaptador)")
     args = ap.parse_args()
 
     from transformers import AutoProcessor, WhisperForConditionalGeneration
@@ -116,11 +118,23 @@ def main():
     dtype = getattr(torch, args.dtype) if dispositivo == "cuda" else torch.float32
 
     print(f"cargando {args.modelo} en {dispositivo}...")
+    modelo = WhisperForConditionalGeneration.from_pretrained(
+        args.modelo, dtype=dtype).to(dispositivo).eval()
+
+    # Aqui se materializa la frontera del PLANNING: la tecnica ganadora de la comparativa
+    # entra en el sistema desplegado SIN tocar la aplicacion .NET. El adaptador se aplica
+    # en este servicio; la app sigue hablando el mismo HTTP con el mismo contrato.
+    nombre = args.modelo
+    if args.adaptador:
+        from peft import PeftModel
+        modelo = PeftModel.from_pretrained(modelo, args.adaptador).eval()
+        nombre = f"{args.modelo}+LoRA"
+        print(f"adaptador LoRA aplicado: {args.adaptador}")
+
     ESTADO.update(
-        nombre=args.modelo, idioma=args.idioma, dispositivo=dispositivo, dtype=dtype,
+        nombre=nombre, idioma=args.idioma, dispositivo=dispositivo, dtype=dtype,
         procesador=AutoProcessor.from_pretrained(args.modelo),
-        modelo=WhisperForConditionalGeneration.from_pretrained(
-            args.modelo, dtype=dtype).to(dispositivo).eval())
+        modelo=modelo)
 
     # Calentamiento: la primera inferencia paga compilacion de kernels. Sin esto, el
     # primer subtitulo de cada sesion llegaria con varios segundos de retraso.

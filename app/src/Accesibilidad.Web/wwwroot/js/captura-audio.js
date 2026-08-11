@@ -30,20 +30,24 @@ const pendientes = new Map();
  * @param {boolean} preprocesado activar supresión de ruido/eco/ganancia del navegador
  * @returns {Promise<number>} frecuencia real concedida por el navegador
  */
-export async function iniciar(refDotnet, frecuencia, msPorFragmento, preprocesado) {
+export async function iniciar(refDotnet, frecuencia, msPorFragmento, preprocesado, gananciaAuto) {
     secuencia = 0;
     pendientes.clear();
 
-    // El preprocesado del navegador (WebRTC) NO es neutro para el ASR: está afinado para
-    // inteligibilidad en llamadas, no para reconocimiento, e introduce artefactos que
-    // Whisper no vio al entrenarse. Además varía entre navegadores y micrófonos, así que
-    // dejarlo implícito haría irreproducibles las medidas. Se declara explícitamente.
+    // El preprocesado del navegador (WebRTC) NO es neutro: está afinado para
+    // inteligibilidad en llamadas, no para reconocimiento.
+    //
+    // El control automático de ganancia va SEPARADO y desactivado por defecto porque
+    // sabotea la segmentación por silencios: al callar el hablante, el AGC sube la
+    // ganancia y amplifica el ruido de fondo, de modo que la energía nunca baja y las
+    // pausas dejan de detectarse. Medido en uso real: con AGC activo, casi todos los
+    // segmentos se cerraban por agotar el tope en lugar de por pausa.
     flujo = await navigator.mediaDevices.getUserMedia({
         audio: {
             channelCount: 1,
             echoCancellation: preprocesado,
             noiseSuppression: preprocesado,
-            autoGainControl: preprocesado,
+            autoGainControl: gananciaAuto,
         },
     });
 

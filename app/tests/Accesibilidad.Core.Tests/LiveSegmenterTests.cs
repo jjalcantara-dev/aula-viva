@@ -7,7 +7,7 @@ namespace Accesibilidad.Core.Tests;
 /// decisión vale 7.4 puntos de WER. Sus casos límite (silencio al principio, tope
 /// alcanzado, audio sin pausas) son fáciles de romper al tocarlo.
 /// </summary>
-public class SegmentadorEnVivoTests
+public class LiveSegmenterTests
 {
     private const int Frecuencia = 16_000;
 
@@ -29,21 +29,21 @@ public class SegmentadorEnVivoTests
     [Fact]
     public void NoCortaAntesDelMinimo()
     {
-        var s = new SegmentadorEnVivo(Frecuencia,
-            new OpcionesSegmentacion { MinimoSegundos = 1.5, MaximoSegundos = 8 });
+        var s = new LiveSegmenter(Frecuencia,
+            new SegmentationOptions { MinSeconds = 1.5, MaxSeconds = 8 });
         // Medio segundo de silencio puro: no debe emitir, es demasiado corto.
-        Assert.Null(s.Añadir(Audio(0.5, 0.0)));
+        Assert.Null(s.Add(Audio(0.5, 0.0)));
     }
 
     [Fact]
     public void CortaAlAlcanzarElMaximo()
     {
-        var s = new SegmentadorEnVivo(Frecuencia,
-            new OpcionesSegmentacion { MaximoSegundos = 2.0 });
+        var s = new LiveSegmenter(Frecuencia,
+            new SegmentationOptions { MaxSeconds = 2.0 });
         // Voz continua sin pausas: el tope es lo único que puede cortar. Acota el peor
         // caso de latencia, que es el precio de segmentar por silencios.
-        Assert.Null(s.Añadir(Audio(1.0, 0.5)));
-        var segmento = s.Añadir(Audio(1.2, 0.5));
+        Assert.Null(s.Add(Audio(1.0, 0.5)));
+        var segmento = s.Add(Audio(1.2, 0.5));
         Assert.NotNull(segmento);
         Assert.True(segmento!.Length / 2.0 / Frecuencia >= 2.0);
     }
@@ -51,29 +51,29 @@ public class SegmentadorEnVivoTests
     [Fact]
     public void CortaEnLaPausaTrasVozSuficiente()
     {
-        var s = new SegmentadorEnVivo(Frecuencia,
-            new OpcionesSegmentacion { MinimoSegundos = 1.0, MaximoSegundos = 10.0 });
-        // Historial suficiente para que el umbral adaptativo se estabilice.
-        Assert.Null(s.Añadir(Audio(2.0, 0.5)));
-        var segmento = s.Añadir(Audio(0.6, 0.0));   // pausa clara
+        var s = new LiveSegmenter(Frecuencia,
+            new SegmentationOptions { MinSeconds = 1.0, MaxSeconds = 10.0 });
+        // History suficiente para que el umbral adaptativo se estabilice.
+        Assert.Null(s.Add(Audio(2.0, 0.5)));
+        var segmento = s.Add(Audio(0.6, 0.0));   // pausa clara
         Assert.NotNull(segmento);
     }
 
     [Fact]
     public void VaciarDevuelveLoPendienteYSoloUnaVez()
     {
-        var s = new SegmentadorEnVivo(Frecuencia);
-        s.Añadir(Audio(0.4, 0.4));
-        Assert.NotNull(s.Vaciar());
-        Assert.Null(s.Vaciar());   // ya no queda nada
+        var s = new LiveSegmenter(Frecuencia);
+        s.Add(Audio(0.4, 0.4));
+        Assert.NotNull(s.Flush());
+        Assert.Null(s.Flush());   // ya no queda nada
     }
 
     [Fact]
     public void TrasCortarSeReinicíaLaAcumulacion()
     {
-        var s = new SegmentadorEnVivo(Frecuencia,
-            new OpcionesSegmentacion { MaximoSegundos = 1.0 });
-        Assert.NotNull(s.Añadir(Audio(1.1, 0.5)));
-        Assert.True(s.SegundosAcumulados < 0.01);
+        var s = new LiveSegmenter(Frecuencia,
+            new SegmentationOptions { MaxSeconds = 1.0 });
+        Assert.NotNull(s.Add(Audio(1.1, 0.5)));
+        Assert.True(s.BufferedSeconds < 0.01);
     }
 }

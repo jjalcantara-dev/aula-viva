@@ -1,0 +1,103 @@
+@page "/view"
+@rendermode InteractiveServer
+@using Accesibilidad.Core
+@implements IDisposable
+@inject CaptionSession Sesion
+
+<PageTitle>Subtítulos — aula</PageTitle>
+
+@* Vista del ALUMNO. No captura audio, no ejecuta el modelo, no calcula nada: recibe los
+   subtítulos que el servidor ya ha transcrito una sola vez para toda la clase. *@
+
+<div class="contenedor">
+
+    <header class="cabecera">
+        <h1>Subtítulos del aula</h1>
+        <span class="estado">
+            <span class="punto @(Sesion.IsLive ? "activo" : "")"></span>
+            @(Sesion.IsLive ? "En directo" : "Sin emisión")
+        </span>
+    </header>
+
+    <div class="subtitulos" style="--escala: @_escala.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+         aria-live="polite" aria-atomic="false">
+        @if (_segmentos.Count == 0)
+        {
+            <p class="vacio">
+                @(Sesion.IsLive
+                    ? "En directo. Los subtítulos aparecerán cuando el docente hable."
+                    : "No hay ninguna emisión en curso. Esta página se actualizará sola cuando empiece.")
+            </p>
+        }
+        else
+        {
+            @foreach (var s in _segmentos.TakeLast(12))
+            {
+                <p class="segmento">
+                    @foreach (var trozo in Sesion.Glossary.Mark(s.Text))
+                    {
+                        if (trozo.IsConcept)
+                        {
+                            <mark>@trozo.Text</mark>
+                        }
+                        else
+                        {
+                            @trozo.Text
+                        }
+                    }
+                </p>
+            }
+        }
+    </div>
+
+    <div class="fila">
+        <span class="ayuda">Tamaño del texto</span>
+        <button class="discreto" @onclick="() => Escalar(-0.15)" aria-label="Reducir texto">A−</button>
+        <button class="discreto" @onclick="() => Escalar(0.15)" aria-label="Aumentar texto">A+</button>
+        <span class="ayuda">@((_escala * 100).ToString("F0"))%</span>
+    </div>
+
+    <p class="ayuda" style="margin-top:1.5rem">
+        Esta pantalla solo muestra. La transcripción la realiza el servidor una única vez
+        para toda la clase, así que conectarse no consume recursos adicionales.
+    </p>
+</div>
+
+@code {
+    private readonly List<TranscriptSegment> _segmentos = [];
+    private double _escala = 1.2;   // por defecto algo mayor: el alumno lee de lejos
+
+    protected override void OnInitialized()
+    {
+        // Un alumno que se conecta a mitad de clase recupera lo ya dicho.
+        _segmentos.AddRange(Sesion.History);
+        Sesion.SegmentPublished += AlPublicar;
+        Sesion.StateChanged += AlCambiarEstado;
+    }
+
+    private void Escalar(double delta) => _escala = Math.Clamp(_escala + delta, 0.7, 3.0);
+
+    /// <summary>
+    /// El evento llega desde el circuito del EMISOR, no desde el de este cliente, así que
+    /// hay que volver al contexto de sincronización propio antes de tocar la interfaz.
+    /// Sin <c>InvokeAsync</c>, Blazor lanza una excepción de hilo.
+    /// </summary>
+    private void AlPublicar(TranscriptSegment segmento) => InvokeAsync(() =>
+    {
+        _segmentos.Add(segmento);
+        StateHasChanged();
+    });
+
+    private void AlCambiarEstado() => InvokeAsync(() =>
+    {
+        if (!Sesion.IsLive) return;
+        _segmentos.Clear();   // emisión nueva: se descarta lo de la anterior
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        Sesion.SegmentPublished -= AlPublicar;
+        Sesion.StateChanged -= AlCambiarEstado;
+    }
+}

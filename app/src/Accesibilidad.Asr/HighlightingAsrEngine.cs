@@ -14,15 +14,20 @@ namespace Accesibilidad.Asr;
 /// dos técnicas de adaptación mezclaría dos cosas distintas.
 /// </para>
 /// </summary>
-public sealed class MotorConResaltado(IMotorAsr interno, Glosario glosario) : IMotorAsr
+public sealed class HighlightingAsrEngine(IAsrEngine interno, Glossary glosario)
+    : IAsrEngine, ISegmentationDiagnostics
 {
-    public string Nombre => $"{interno.Nombre} + glosario ({glosario.Terminos.Count} términos)";
+    /// <summary>Reenvía al motor envuelto: sin esto, el diagnóstico se perdería aquí.</summary>
+    public (int BySilence, int ByTimeout) Cuts =>
+        interno is ISegmentationDiagnostics d ? d.Cuts : (0, 0);
 
-    public async IAsyncEnumerable<SegmentoTranscrito> TranscribirAsync(
-        IAsyncEnumerable<FragmentoAudio> fragmentos,
+    public string Name => $"{interno.Name} + glosario ({glosario.Terms.Count} términos)";
+
+    public async IAsyncEnumerable<TranscriptSegment> TranscribeAsync(
+        IAsyncEnumerable<AudioChunk> fragmentos,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        await foreach (var segmento in interno.TranscribirAsync(fragmentos, ct))
-            yield return segmento with { ConceptosClave = glosario.Detectar(segmento.Texto) };
+        await foreach (var segmento in interno.TranscribeAsync(fragmentos, ct))
+            yield return segmento with { KeyConcepts = glosario.Detect(segmento.Text) };
     }
 }

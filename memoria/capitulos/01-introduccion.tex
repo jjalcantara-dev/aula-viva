@@ -1,0 +1,68 @@
+\chapter{Introducción}
+
+\section{Motivación}
+
+Un alumno con discapacidad auditiva que asiste a una clase magistral se enfrenta a un
+problema que el resto no tiene: la información llega por un canal que no puede usar. Las
+soluciones habituales pasan por un intérprete de lengua de signos o por un profesional que
+transcriba en directo, y ambas comparten la misma limitación: dependen de que haya una
+persona disponible, con formación específica, durante toda la sesión. En la práctica eso
+significa que muchas clases se quedan sin cobertura.
+
+El reconocimiento automático del habla ha alcanzado en los últimos años una calidad que
+invita a plantear la alternativa. Los modelos de propósito general funcionan
+razonablemente bien en español sin necesidad de entrenarlos, y el equipamiento necesario
+para ejecutarlos ha dejado de ser exclusivo de centros de cálculo. La pregunta ya no es si
+la transcripción automática es viable, sino si lo es \emph{con la calidad suficiente} para
+que un alumno pueda seguir una clase sin perder contenido.
+
+Esa distinción es la que motiva este trabajo. Un sistema que acierta el noventa por ciento
+de las palabras suena aceptable expresado así; pero si el diez por ciento restante incluye
+los términos técnicos de la asignatura, los nombres propios o las negaciones, el alumno no
+recibe una versión ligeramente degradada de la clase: recibe una versión distinta. La
+métrica habitual del campo, la tasa de error de palabra, no distingue entre perder una
+preposición y perder un \emph{no}.
+
+\section{Planteamiento del trabajo}
+
+El trabajo tiene dos núcleos que se abordan por separado y se apoyan mutuamente.
+
+El primero es una comparativa empírica: se evalúa si las técnicas de adaptación al dominio
+más habituales mejoran el reconocimiento en español sobre material que se parece al de un
+aula. Se estudian tres: aportar al modelo un glosario de la asignatura como contexto,
+corregir su salida con un modelo de lenguaje, y ajustar sus pesos mediante LoRA. Cada una
+se mide con el mismo diseño, sobre el mismo corpus y con el mismo criterio estadístico, de
+modo que las cifras sean comparables entre sí.
+
+El segundo es una aplicación de subtitulado en vivo, construida para desplegarse en la red
+local de un centro: el docente emite desde su equipo y el alumnado lee desde el suyo, sin
+que ningún dispositivo del aula necesite capacidad de cálculo. La aplicación no es una
+demostración del primer núcleo; es un banco de pruebas que plantea preguntas propias, como
+cada cuánto trocear el audio o dónde cortarlo, que se responden con la misma metodología
+experimental.
+
+La relación entre ambos resultó menos unidireccional de lo previsto. La investigación
+proporcionó a la aplicación criterios de diseño medidos en lugar de intuidos; pero la
+aplicación detectó a su vez un problema que ningún experimento de laboratorio podía ver,
+porque solo aparece cuando hay un micrófono y un navegador reales de por medio.
+
+\section{Estructura del trabajo}
+
+El capítulo~\ref{cap:estado} sitúa el trabajo respecto a la literatura y a la práctica del
+sector, y documenta la búsqueda de corpus, que resultó ser el condicionante principal de
+todo el diseño experimental. El capítulo~\ref{cap:requisitos} deriva los requisitos, tanto
+funcionales de la aplicación como metodológicos de la comparativa. El
+capítulo~\ref{cap:objetivos} enuncia los objetivos y los criterios con los que se
+consideran cumplidos.
+
+El capítulo~\ref{cap:desarrollo} contiene el grueso del trabajo: la metodología
+experimental, los nueve experimentos realizados con sus resultados, y el desarrollo de la
+aplicación. El capítulo~\ref{cap:conclusiones} recoge las conclusiones, las limitaciones
+reconocidas y las líneas que quedan abiertas.
+
+Conviene anticipar una particularidad de este trabajo: buena parte de sus aportaciones no
+proviene de que las técnicas estudiadas funcionaran, sino de descubrir bajo qué condiciones
+las mediciones que las evalúan son válidas. Varias de las conclusiones surgieron de
+detectar que un resultado aparentemente sólido era un artefacto del procedimiento de
+medida. Esos hallazgos se documentan con el mismo detalle que los resultados positivos,
+porque condicionan cómo deben interpretarse todos los demás.

@@ -1,0 +1,54 @@
+\documentclass[11pt,a4paper,spanish]{book}
+\usepackage{estilo_unir-1}
+\usepackage{apacite}
+
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{longtable}
+\numberwithin{equation}{chapter}
+\numberwithin{figure}{chapter}
+% La plantilla original deja las tablas con numeracion corrida; se unifica con figuras
+% y ecuaciones para que las referencias del texto sean coherentes.
+\numberwithin{table}{chapter}
+
+%---------------------------
+% titulo del trabajo y autor
+%---------------------------
+\title{Sistema de accesibilidad educativa en tiempo real con transcripción adaptativa: comparativa de técnicas sobre modelos ASR en español}
+\titulacion{Máster Universitario en Inteligencia Artificial}
+\author{[Nombre y apellidos]}
+\date{[d de mes de 2026]}
+\director{[Pendiente de asignación]}
+\nombreciudad{[Ciudad]}
+
+\begin{document}
+\renewcommand{\listfigurename}{Índice de Ilustraciones}
+\renewcommand{\listtablename}{Índice de Tablas}
+\renewcommand{\contentsname}{Índice de Contenidos}
+\renewcommand{\figurename}{Figura}
+\renewcommand{\tablename}{Tabla}
+
+\maketitle
+
+\frontmatter
+\tableofcontents
+\listoffigures
+\listoftables
+
+\include{capitulos/00-resumen}
+
+\mainmatter
+\include{capitulos/01-introduccion}
+\include{capitulos/02-estado-del-arte}
+\include{capitulos/03-requisitos}
+\include{capitulos/04-objetivos}
+\include{capitulos/05-desarrollo}
+\include{capitulos/06-conclusiones}
+
+\bibliographystyle{apacite}
+\bibliography{bibliografia}
+
+\appendix
+\include{apendices/a-reproducibilidad}
+
+\end{document}

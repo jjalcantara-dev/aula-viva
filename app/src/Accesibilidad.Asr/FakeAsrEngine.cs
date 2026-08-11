@@ -14,7 +14,7 @@ namespace Accesibilidad.Asr;
 /// El barrido de M0 midió <c>large-v3-turbo</c> a ~20x más rápido que el audio, así que
 /// se espera que el cuello de botella esté aquí y no en el modelo.
 /// </summary>
-public sealed class MotorAsrSimulado : IMotorAsr
+public sealed class FakeAsrEngine : IAsrEngine
 {
     private static readonly string[] TextoFalso =
     [
@@ -29,15 +29,15 @@ public sealed class MotorAsrSimulado : IMotorAsr
     /// Retardo artificial por fragmento. Cero mide el circuito puro; valores mayores
     /// permiten comprobar cómo se degrada la interfaz cuando el modelo va justo.
     /// </param>
-    public MotorAsrSimulado(TimeSpan? retardoSimulado = null) =>
+    public FakeAsrEngine(TimeSpan? retardoSimulado = null) =>
         _retardoSimulado = retardoSimulado ?? TimeSpan.Zero;
 
-    public string Nombre => _retardoSimulado == TimeSpan.Zero
+    public string Name => _retardoSimulado == TimeSpan.Zero
         ? "simulado (circuito vacío)"
         : $"simulado (+{_retardoSimulado.TotalMilliseconds:F0} ms)";
 
-    public async IAsyncEnumerable<SegmentoTranscrito> TranscribirAsync(
-        IAsyncEnumerable<FragmentoAudio> fragmentos,
+    public async IAsyncEnumerable<TranscriptSegment> TranscribeAsync(
+        IAsyncEnumerable<AudioChunk> fragmentos,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         await foreach (var fragmento in fragmentos.WithCancellation(ct))
@@ -45,13 +45,13 @@ public sealed class MotorAsrSimulado : IMotorAsr
             if (_retardoSimulado > TimeSpan.Zero)
                 await Task.Delay(_retardoSimulado, ct);
 
-            yield return new SegmentoTranscrito(
-                Secuencia: fragmento.Secuencia,
-                Texto: TextoFalso[(int)(fragmento.Secuencia % TextoFalso.Length)],
-                EsParcial: false,
-                ConceptosClave: [],
-                CapturadoEn: fragmento.CapturadoEn,
-                TranscritoEn: DateTimeOffset.UtcNow);
+            yield return new TranscriptSegment(
+                Sequence: fragmento.Sequence,
+                Text: TextoFalso[(int)(fragmento.Sequence % TextoFalso.Length)],
+                IsPartial: false,
+                KeyConcepts: [],
+                CapturedAt: fragmento.CapturedAt,
+                TranscribedAt: DateTimeOffset.UtcNow);
         }
     }
 }

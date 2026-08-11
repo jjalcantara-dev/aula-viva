@@ -407,7 +407,13 @@ La inferencia con Whisper suele resolverse. **El entrenamiento (LoRA) sobre GPU 
 
 **Mitigación:** valida que la GPU **entrena algo, lo que sea**, en M0-M1. Un entrenamiento mínimo de juguete, no Whisper. Hasta que eso funcione, LoRA es "opcional" en toda comunicación con el director. Fallback: inferencia en CPU para prompting y post-corrección (no necesitan entrenamiento) + cómputo externo puntual para LoRA 🔴 **DIRECTOR: ¿se acepta usar cómputo externo?**
 
-### ⚠️ R3 — Datos insuficientes para fine-tuning
+### ✅ R3 — Datos insuficientes para fine-tuning — **RESUELTO (M0)**
+> exp-003 entrenó LoRA con 1.500 clips (4,64 h) de la partición `train` de VoxPopuli en
+> 15,8 minutos, produciendo un adaptador de 18,9 MB. Es la **única técnica de las tres que
+> mejora de forma concluyente**: −1.23 pp de WER, IC [−1.75, −0.77], p < 0.0001.
+> La restricción de datos no se materializó. Se conserva el análisis original abajo.
+
+### ⚠️ R3 (análisis original) — Datos insuficientes para fine-tuning
 LoRA necesita bastante más material anotado que las otras dos técnicas. Si el corpus se queda corto (R1), LoRA cae por dependencia, no por tiempo.
 **Mitigación:** es la última en el orden de ejecución y la segunda en el orden de recorte. No la anuncies como comprometida hasta que R1 y R2 estén resueltos.
 
@@ -437,6 +443,26 @@ Si grabas clases reales, hay voz de personas identificables.
 **Mitigación:** el plan en fases relativas absorbe desfases sin rehacerse. Los puntos de recorte de la sección 4 son la válvula. Revisa el plan al final de cada fase, no cada semana.
 
 ---
+
+## 5 bis. Estado de la comparativa (M0)
+
+Las tres técnicas comprometidas están medidas sobre el mismo corpus de referencias
+verificadas, con diseño pareado y veredicto que exige coincidencia entre el IC por
+bootstrap y el test de signos.
+
+| Técnica | Δ WER | Veredicto |
+|---|---:|---|
+| Prompting contextual | −0.37 / +0.35 | Sin efecto (signos opuestos en dos corpus) |
+| Post-corrección con LLM | +1.18 | Degrada (replicado) |
+| Fine-tuning con LoRA | **−1.23** | **Mejora** (única concluyente) |
+
+**Solo funciona la que modifica los pesos.** Y una conclusión que reordena el trabajo:
+segmentar el audio por silencios (exp-102, −7.4 pp) rinde **seis veces más** que la mejor
+técnica de adaptación, a coste de cómputo nulo. El margen no estaba donde la propuesta
+suponía.
+
+La técnica ganadora ya está en el sistema desplegado (`make demo-lora`) **sin haber tocado
+la aplicación .NET**, que era la promesa arquitectónica del proyecto.
 
 ## 6. Valoración crítica del alcance
 

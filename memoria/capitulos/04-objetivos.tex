@@ -1,0 +1,93 @@
+\chapter{Objetivos}
+\label{cap:objetivos}
+
+\section{Objetivo general}
+
+Determinar si las técnicas de adaptación al dominio mejoran el reconocimiento automático
+del habla en español para su uso en accesibilidad educativa, y construir un sistema de
+subtitulado en vivo que permita comprobarlo en condiciones de aula.
+
+El objetivo se formula deliberadamente como una pregunta abierta y no como la búsqueda de
+una mejora: un resultado negativo bien medido responde igual de bien que uno positivo,
+siempre que el procedimiento permita distinguir la ausencia de efecto de la incapacidad
+para detectarlo.
+
+\section{Objetivos específicos}
+
+\subsection*{Del núcleo investigador}
+
+\begin{enumerate}
+  \item Establecer una línea base reproducible del reconocimiento sin adaptar, sobre varios
+        modelos y corpus, con trazabilidad completa de la configuración que produjo cada
+        cifra.
+  \item Evaluar tres técnicas de adaptación (prompting contextual, post-corrección con un
+        modelo de lenguaje local y ajuste fino con LoRA) bajo un diseño común que permita
+        compararlas entre sí.
+  \item Determinar la potencia estadística necesaria para que la comparación sea capaz de
+        detectar los efectos esperables, y verificar que el material empleado la alcanza.
+  \item Identificar qué modos de fallo relevantes para accesibilidad no quedan reflejados
+        en la métrica habitual, y proponer instrumentos que los expongan.
+\end{enumerate}
+
+\subsection*{Del núcleo aplicado}
+
+\begin{enumerate}\setcounter{enumi}{4}
+  \item Construir una aplicación de subtitulado en vivo desplegable en la red local de un
+        centro, con un emisor y múltiples receptores, en la que todo el cálculo resida en
+        el servidor.
+  \item Caracterizar experimentalmente el compromiso entre latencia y calidad que impone el
+        troceado del audio, y elegir el punto de operación con datos propios.
+  \item Cuantificar el margen acústico que requiere el sistema, para poder formular
+        requisitos de despliegue verificables.
+  \item Mantener una frontera entre investigación y aplicación que permita incorporar la
+        técnica ganadora al sistema desplegado sin modificarlo.
+\end{enumerate}
+
+\section{Criterios de cumplimiento}
+
+Cada objetivo se considera alcanzado bajo condiciones explícitas, fijadas antes de
+ejecutar los experimentos para evitar ajustarlas a los resultados obtenidos:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|c|p{10.5cm}|}
+\hline
+\textbf{Obj.} & \textbf{Se considera cumplido si} \\
+\hline
+1 & Cualquier cifra publicada puede regenerarse con un solo comando, y el resultado
+    registra el commit y el contenido exacto del corpus empleado. \\
+\hline
+2 & Las tres técnicas se miden sobre el mismo corpus, con la misma decodificación y el
+    mismo criterio de significación. \\
+\hline
+3 & El tamaño de muestra se justifica con un cálculo previo, y las mediciones que no lo
+    alcanzan se marcan como no concluyentes en lugar de interpretarse. \\
+\hline
+4 & Se dispone de al menos una métrica adicional que detecte fallos invisibles al WER, con
+    evidencia de que tales fallos existen en el material analizado. \\
+\hline
+5 & Un cliente conectado a la red del centro visualiza los subtítulos sin ejecutar ningún
+    cálculo ni requerir permisos de captura. \\
+\hline
+6 & La elección del tamaño y la estrategia de segmentación se respalda con un barrido
+    propio, no con valores tomados por convención. \\
+\hline
+7 & Existe una curva de degradación frente a ruido que permita expresar el requisito de
+    captación en términos verificables. \\
+\hline
+8 & La técnica ganadora se incorpora al sistema desplegado sin modificar el código de la
+    aplicación. \\
+\hline
+\end{tabular}
+\caption{Criterios de cumplimiento de los objetivos específicos.}
+\label{tab:criterios}
+\end{table}
+
+\section{Alcance y exclusiones}
+
+Quedan fuera del alcance, y se declaran aquí para evitar que se interpreten como
+carencias: la evaluación con usuarios reales del sistema desplegado; la traducción a otros
+idiomas o a lengua de signos; el reconocimiento de múltiples hablantes simultáneos; y la
+identificación de quién habla en cada momento. El sistema asume un único emisor, que es el
+escenario de la clase magistral.

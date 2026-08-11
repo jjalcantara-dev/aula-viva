@@ -1,0 +1,160 @@
+\chapter{Contexto y Estado del Arte}
+\label{cap:estado}
+
+\section{Reconocimiento automático del habla de propósito general}
+
+El punto de partida de este trabajo es Whisper \cite{radford2023whisper}, un modelo
+codificador-decodificador entrenado sobre una cantidad masiva de audio con supervisión
+débil. Su relevancia para el problema planteado no está en alcanzar el mejor resultado en
+un banco de pruebas concreto, sino en dos propiedades prácticas: funciona en español sin
+necesidad de entrenamiento adicional, y es lo bastante robusto frente a condiciones de
+grabación variables como para plantear su uso fuera de un estudio.
+
+El modelo procesa el audio en ventanas de treinta segundos. Esa decisión de diseño, que
+resulta natural para transcribir grabaciones completas, se convierte en un obstáculo cuando
+se pretende subtitular en directo: el sistema no puede esperar medio minuto para mostrar la
+primera palabra. La adaptación de un modelo pensado para procesamiento por lotes a un
+escenario de flujo continuo es un problema abierto \cite{machacek2023whisperstreaming}, y
+constituye una parte sustancial del trabajo de ingeniería descrito en el
+capítulo~\ref{cap:desarrollo}.
+
+\section{Técnicas de adaptación al dominio}
+
+Cuando un modelo general se aplica a un dominio concreto, la terminología específica y el
+registro propio de ese dominio suelen degradar el resultado. Las estrategias para
+corregirlo se ordenan por coste creciente.
+
+\textbf{Condicionamiento por contexto.} La más barata consiste en aportar al decodificador
+un texto previo que oriente sus predicciones, sin modificar el modelo. En Whisper esto se
+implementa mediante un prompt que actúa como transcripción anterior. Es atractiva porque
+no requiere entrenamiento ni datos anotados: bastaría con que el docente proporcionara el
+glosario de la asignatura.
+
+\textbf{Corrección posterior con un modelo de lenguaje.} Una segunda vía deja intacto el
+reconocedor y repara su salida mediante un modelo de lenguaje, aprovechando que este
+dispone de conocimiento léxico y sintáctico del que el reconocedor carece. La intuición es
+sólida; los resultados de este trabajo la contradicen, y el capítulo~\ref{cap:desarrollo}
+explica por qué.
+
+\textbf{Ajuste fino con adaptadores.} La tercera modifica los pesos del modelo. El ajuste
+completo resulta inviable en equipamiento modesto, pero LoRA \cite{hu2021lora} permite
+entrenar únicamente unas matrices de rango bajo insertadas en las capas de atención,
+reduciendo los parámetros entrenables en varios órdenes de magnitud y produciendo
+adaptadores de unos pocos megabytes. Es lo que hace que esta técnica sea abordable en el
+contexto de un trabajo como este.
+
+\section{Recursos de habla en español}
+
+La disponibilidad de corpus condicionó el diseño experimental más que ninguna otra
+decisión, hasta el punto de que conviene documentar la búsqueda y no solo su resultado.
+
+\subsection{El corpus objetivo}
+
+El recurso que mejor se ajusta al problema es poliMedia, el repositorio de clases grabadas
+de la Universitat Politècnica de València, del que el proyecto europeo transLectures
+transcribió manualmente más de ciento quince horas \cite{deltoro2014translectures}. Reúne
+las tres condiciones que este trabajo necesita: dominio educativo real, lengua española y
+transcripción verificada por personas.
+
+No se encuentra publicado en ningún repositorio de acceso abierto. Se cursó una solicitud
+institucional al grupo responsable, que no obtuvo respuesta dentro del plazo de este
+trabajo. Esta circunstancia es la limitación de fondo de toda la parte experimental.
+
+\subsection{Los recursos efectivamente empleados}
+
+A falta del corpus objetivo se recurrió a sustitutos, escogidos para cubrir ejes distintos
+del problema en lugar de acumular horas.
+
+VoxPopuli \cite{wang2021voxpopuli} aporta discurso parlamentario en español peninsular.
+Presenta dos propiedades que resultaron decisivas: incorpora una marca que identifica las
+transcripciones verificadas manualmente, y anota la variedad dialectal del hablante.
+FLEURS \cite{conneau2022fleurs} proporciona voz leída de dominio general, útil como techo
+de calidad; conviene señalar que su configuración en español corresponde a la variedad
+latinoamericana, sin equivalente peninsular. Se emplearon además dos recursos de habla
+espontánea en español de México procedentes de repositorios abiertos, y un conjunto de
+locución de medios en español peninsular.
+
+\subsection{La calidad de la referencia como variable}
+
+Un hallazgo de la fase de búsqueda merece mención aquí porque afecta a la interpretación de
+toda la literatura basada en estos recursos: la calidad de las transcripciones de
+referencia varía sustancialmente entre corpus abiertos, y esa variación se confunde con
+diferencias de rendimiento del modelo.
+
+En los recursos de habla espontánea empleados, las referencias omiten la acentuación de
+forma sistemática y contienen erratas. Medido sobre ellos, entre un tercio y un cuarenta
+por ciento de la tasa de error atribuida al modelo corresponde en realidad a defectos de la
+referencia. Se observaron casos en que el sistema escribía correctamente una palabra que la
+transcripción de referencia recogía mal, y era penalizado por ello.
+
+La consecuencia práctica quedó incorporada al procedimiento: antes de adoptar un corpus se
+audita manualmente una muestra de sus referencias. Que un recurso disponga de transcripción
+no implica que sirva como referencia.
+
+\section{Evaluación de sistemas de reconocimiento}
+
+\subsection{La métrica habitual y sus límites}
+
+La tasa de error de palabra, definida como la distancia de edición entre referencia e
+hipótesis normalizada por la longitud de la referencia, es la métrica estándar del campo.
+Su fortaleza es la comparabilidad; su debilidad, que asigna el mismo coste a todas las
+palabras y a todas las operaciones de edición.
+
+Esa limitación está documentada en la literatura reciente, que señala que la métrica opera
+en el plano léxico sin consideración del contexto semántico, y que trata de forma idéntica
+errores que destruyen la comprensión y errores irrelevantes para ella. Se han propuesto
+alternativas que ponderan las palabras según su contenido informativo, que penalizan de
+forma específica los errores sobre entidades nombradas, o que combinan la distancia de
+edición con señales de distancia semántica.
+
+Este trabajo llega a la misma conclusión por vía empírica y desde un dominio concreto: los
+errores que perjudican a un alumno con discapacidad auditiva no son los que más pesan en la
+métrica. Las mediciones que lo sustentan, y los instrumentos complementarios que se
+proponen, se presentan en el capítulo~\ref{cap:desarrollo}.
+
+\subsection{Alucinaciones}
+
+Un modo de fallo específico de los modelos generativos aplicados al reconocimiento consiste
+en producir texto fluido y verosímil sin correspondencia con el audio. A diferencia de un
+error ordinario, resulta indetectable para el usuario final: la salida es gramatical y
+coherente con el dominio.
+
+Para un sistema de accesibilidad esta distinción es central. Un subtítulo ausente se
+percibe como una carencia; uno inventado se lee como información. El trabajo incorpora por
+ello la detección de salidas anómalas como criterio de selección de modelo, y no solo la
+tasa de error.
+
+\section{Subtitulado en tiempo real}
+
+La literatura sobre adaptación de Whisper a escenarios de flujo continuo
+\cite{machacek2023whisperstreaming} y la práctica documentada del sector coinciden en
+varios puntos que sirvieron de referencia para el diseño de la aplicación: emplear ventanas
+de entre cinco y diez segundos, solaparlas para no perder las palabras que caen en la
+frontera, y apoyarse en detección de actividad de voz para decidir cuándo dar por terminada
+una intervención.
+
+Coinciden también en desaconsejar el condicionamiento sobre la transcripción previa entre
+ventanas, por el riesgo de propagación de errores. Este trabajo verificó esa recomendación
+de forma independiente y obtuvo el mismo resultado, lo que constituye una validación
+externa útil de la parte experimental.
+
+La divergencia principal respecto a la práctica habitual está en el umbral de silencio
+empleado para cerrar una intervención, y se discute en el capítulo~\ref{cap:desarrollo}
+junto con la medición que la respalda.
+
+\section{Posicionamiento del trabajo}
+
+Este trabajo no propone una técnica nueva de adaptación ni un modelo nuevo. Su aportación
+se sitúa en tres planos.
+
+En el plano empírico, compara tres técnicas de adaptación sobre español con un diseño y un
+criterio estadístico homogéneos, y contrasta su rendimiento con el de las decisiones de
+ingeniería del sistema; una comparación que la literatura suele tratar por separado.
+
+En el plano metodológico, documenta las condiciones bajo las cuales esas mediciones son
+válidas, incluyendo varios casos en que un procedimiento aparentemente correcto produce
+cifras verosímiles y falsas.
+
+En el plano aplicado, construye un sistema desplegable en un centro educativo y lo emplea
+como banco de pruebas, del que surgieron preguntas que la parte experimental no se habría
+planteado.

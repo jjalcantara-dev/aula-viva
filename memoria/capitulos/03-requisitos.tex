@@ -1,0 +1,139 @@
+\chapter{Identificación de Requisitos}
+\label{cap:requisitos}
+
+El trabajo tiene dos núcleos y por tanto dos conjuntos de requisitos de naturaleza
+distinta: los que debe cumplir la aplicación para ser útil en un aula, y los que debe
+cumplir el procedimiento experimental para que sus conclusiones sean válidas. Los segundos
+suelen quedar implícitos; aquí se enuncian porque varias decisiones del trabajo se derivan
+directamente de ellos.
+
+\section{Requisitos del sistema de subtitulado}
+
+\subsection{Funcionales}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|c|p{11cm}|}
+\hline
+\textbf{Id} & \textbf{Requisito} \\
+\hline
+RF1 & El sistema transcribe en directo la voz del docente y muestra el resultado como
+      subtítulos. \\
+\hline
+RF2 & Varios alumnos pueden visualizar simultáneamente los subtítulos desde sus propios
+      dispositivos. \\
+\hline
+RF3 & El alumnado no necesita instalar nada ni conceder permisos: basta con abrir una
+      dirección en el navegador. \\
+\hline
+RF4 & El docente puede definir, antes de comenzar, la terminología de la sesión, que se
+      resalta visualmente en los subtítulos. \\
+\hline
+RF5 & Un alumno que se incorpora una vez iniciada la clase recupera lo transcrito hasta
+      ese momento. \\
+\hline
+RF6 & Cada alumno ajusta el tamaño del texto en su propio dispositivo. \\
+\hline
+RF7 & El sistema informa de la latencia con que está operando. \\
+\hline
+\end{tabular}
+\caption{Requisitos funcionales del sistema de subtitulado.}
+\label{tab:rf}
+\end{table}
+
+El requisito RF6 no es un detalle de comodidad. El sistema se dirige a personas con una
+discapacidad sensorial, y no cabe suponer que quien lo desarrolla pueda fijar un tamaño de
+texto adecuado para todas ellas ni para todas las distancias de lectura de un aula.
+
+\subsection{No funcionales}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|c|p{11cm}|}
+\hline
+\textbf{Id} & \textbf{Requisito} \\
+\hline
+RNF1 & La latencia entre lo dicho y lo mostrado debe permitir seguir la clase. El umbral
+       concreto se determina experimentalmente y se reporta con su valor típico y su peor
+       caso. \\
+\hline
+RNF2 & El coste de cálculo no debe crecer con el número de alumnos conectados. \\
+\hline
+RNF3 & El sistema opera exclusivamente en la red local del centro. \\
+\hline
+RNF4 & El puesto de emisión está protegido frente a uso no autorizado. \\
+\hline
+RNF5 & El sistema funciona con equipamiento asequible para un centro educativo. \\
+\hline
+RNF6 & El requisito de captación de audio debe expresarse en términos verificables, no
+       como recomendación genérica. \\
+\hline
+\end{tabular}
+\caption{Requisitos no funcionales del sistema de subtitulado.}
+\label{tab:rnf}
+\end{table}
+
+RNF2 es el que determina la arquitectura. Si cada dispositivo del aula ejecutara el modelo,
+el sistema exigiría una unidad de cálculo por alumno y dejaría de ser desplegable. De ahí
+que todo el reconocimiento resida en el servidor y los clientes se limiten a visualizar.
+
+RNF3 se deriva de la naturaleza del material: el sistema difunde audio de aula transcrito,
+con voces identificables y frecuentemente de menores de edad. La restricción no puede
+delegarse en la configuración de red del centro, porque un reenvío de puertos mal
+configurado la anularía sin que nadie lo advirtiera; debe imponerla la propia aplicación.
+
+RNF6 responde a un problema recurrente en los requisitos de este tipo de sistemas. Indicar
+que se necesita ``un micrófono adecuado'' no es verificable. La caracterización
+experimental frente al ruido permite sustituirlo por una condición comprobable sobre la
+relación señal-ruido, y con ella justificar la elección del equipo de captación.
+
+\section{Requisitos del procedimiento experimental}
+
+Estos requisitos no proceden del usuario sino de la naturaleza de la pregunta que el
+trabajo pretende responder. Se enuncian porque su incumplimiento no produce un fallo
+visible: produce cifras verosímiles y falsas.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|c|p{11cm}|}
+\hline
+\textbf{Id} & \textbf{Requisito} \\
+\hline
+RE1 & Toda cifra publicada debe poder regenerarse a partir del código y los datos
+       registrados junto a ella. \\
+\hline
+RE2 & La identidad de un resultado incluye su configuración completa, no solo el modelo y
+       el corpus. \\
+\hline
+RE3 & El tamaño de muestra debe justificarse antes de interpretar diferencias, y las
+       mediciones que no lo alcancen deben marcarse como no concluyentes. \\
+\hline
+RE4 & Las comparaciones entre condiciones deben ser pareadas y compartir configuración. \\
+\hline
+RE5 & Los datos empleados para adaptar el sistema deben ser disjuntos de los empleados
+       para evaluarlo. \\
+\hline
+RE6 & La calidad de las referencias debe auditarse antes de adoptarlas. \\
+\hline
+RE7 & Ninguna cifra de la memoria se transcribe manualmente: las tablas y figuras se
+       generan desde los datos de ejecución. \\
+\hline
+\end{tabular}
+\caption{Requisitos del procedimiento experimental.}
+\label{tab:re}
+\end{table}
+
+RE2 merece justificación porque resulta menos evidente que los demás. Durante el trabajo se
+comprobó que dos ejecuciones del mismo modelo sobre el mismo corpus, diferenciadas
+únicamente por la estrategia de decodificación, arrojaban tasas de error que diferían en
+más de doce puntos. Un resultado identificado solo por modelo y corpus habría permitido
+comparar cifras no comparables sin que nada lo delatara.
+
+RE6 se incorporó tras comprobar que una parte sustancial del error atribuido al modelo en
+determinados corpus correspondía en realidad a defectos de la transcripción de referencia.
+
+RE7 es una consecuencia práctica de RE1: una cifra copiada a mano deja de estar vinculada a
+la ejecución que la produjo en el momento en que se copia.

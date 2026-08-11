@@ -10,10 +10,13 @@ CORPUS  := voxpopuli_es
 MANIF   := research/corpus/manifests/$(CORPUS).jsonl
 RESULT  := research/experiments/exp-000-baseline/results
 PUERTO_ASR := 5601
+PUERTO_APP := 5203
+# IP de la interfaz por la que sale el tráfico: la que deben teclear los alumnos.
+IP_LOCAL := $(shell ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K[\d.]+' | head -1)
 
 .DEFAULT_GOAL := ayuda
 .PHONY: ayuda entorno gpu test app asr demo parar corpus baseline \
-        exp-001 exp-002 exp-003 exp-100 exp-102 exp-103 exp-104 tablas estado limpiar
+        direcciones demo-lora exp-001 exp-002 exp-003 exp-100 exp-102 exp-103 exp-104 tablas estado limpiar
 
 ayuda:  ## Muestra esta ayuda
 	@echo "TFM — atajos disponibles:"
@@ -41,21 +44,33 @@ test:  ## Ejecuta las pruebas de la aplicación
 	cd app && dotnet test
 
 app:  ## Arranca la app con motor SIMULADO (mide latencia del circuito)
-	@echo "-> http://localhost:5203/subtitulos"
-	cd app && dotnet run --project src/Accesibilidad.Web
+	@$(MAKE) --no-print-directory direcciones
+	cd app && dotnet run --project src/Accesibilidad.Web --urls http://0.0.0.0:$(PUERTO_APP)
+
+direcciones:  ## Muestra por dónde entran el docente y el alumnado
+	@echo
+	@echo "  DOCENTE  http://localhost:$(PUERTO_APP)/broadcast"
+	@echo "           (el micrófono solo funciona en localhost sin HTTPS)"
+	@echo "  ALUMNOS  http://$(IP_LOCAL):$(PUERTO_APP)/view"
+	@echo
 
 asr:  ## Arranca solo el servicio de transcripción (Whisper)
-	$(PY) serving/servidor_asr.py --modelo $(MODELO) --puerto $(PUERTO_ASR)
+	$(PY) serving/servidor_asr.py --modelo $(MODELO) --puerto $(PUERTO_ASR) $(ADAPTADOR)
+
+demo-lora:  ## Como `demo`, pero con el adaptador LoRA de exp-003 (técnica ganadora)
+	@$(MAKE) demo ADAPTADOR="--adaptador research/experiments/exp-003-lora/adaptador"
 
 demo:  ## Arranca servicio ASR + app con Whisper REAL, y limpia al salir
 	@echo "Arrancando servicio ASR ($(MODELO))..."
-	@$(PY) serving/servidor_asr.py --modelo $(MODELO) --puerto $(PUERTO_ASR) \
+	@$(PY) serving/servidor_asr.py --modelo $(MODELO) --puerto $(PUERTO_ASR) $(ADAPTADOR) \
 	    > /tmp/tfm-asr.log 2>&1 & echo $$! > /tmp/tfm-asr.pid
 	@echo "Esperando a que cargue el modelo (puede tardar)..."
 	@until curl -sf -o /dev/null http://localhost:$(PUERTO_ASR)/salud; do sleep 2; done
-	@echo "Servicio listo. Arrancando app -> http://localhost:5203/subtitulos"
+	@echo "Servicio listo."
+	@$(MAKE) --no-print-directory direcciones
 	@trap 'kill $$(cat /tmp/tfm-asr.pid) 2>/dev/null; rm -f /tmp/tfm-asr.pid' EXIT; \
-	  cd app && Asr__Motor=whisper dotnet run --project src/Accesibilidad.Web
+	  cd app && Asr__Motor=whisper dotnet run --project src/Accesibilidad.Web \
+	    --urls http://0.0.0.0:$(PUERTO_APP)
 
 parar:  ## Detiene servicios y experimentos que hayan quedado sueltos
 	-@pkill -f servidor_asr.py 2>/dev/null && echo "servicio ASR detenido" || true

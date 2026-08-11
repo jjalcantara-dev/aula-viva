@@ -1,38 +1,288 @@
-h1:focus {
-    outline: none;
+/* Estilos del subtitulador.
+ *
+ * Criterio de diseño: la aplicación es PARA accesibilidad, así que su propia interfaz
+ * debe serlo. Lo que manda:
+ *   - El subtítulo es el elemento dominante. Todo lo demás se subordina.
+ *   - Contraste alto y tipografía grande: el alumno lee de lejos y durante una hora.
+ *   - Tamaño de letra ajustable por el propio alumno, no fijado por el desarrollador.
+ *   - Fondo oscuro por defecto: es lo habitual en subtitulado y cansa menos la vista.
+ */
+
+:root {
+    --fondo: #14161a;
+    --superficie: #1e2127;
+    --superficie-alta: #272b33;
+    --borde: #363b45;
+    --texto: #f2f4f7;
+    --texto-tenue: #a4acb9;
+    --acento: #4da3ff;
+    --resalte: #ffd54a;
+    --resalte-texto: #2a2100;
+    --ok: #4ade80;
+    --alerta: #f87171;
+    --radio: 10px;
 }
 
-.valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--fondo);
+    color: var(--texto);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
 }
 
-.invalid {
-    outline: 1px solid #e50000;
+.contenedor {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem 1.25rem 3rem;
 }
 
-.validation-message {
-    color: #e50000;
+/* ---------------------------------------------------------------- cabecera -- */
+
+.cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--borde);
+}
+
+.cabecera h1 {
+    font-size: 1.35rem;
+    margin: 0;
+    flex: 1 1 auto;
+}
+
+.motor {
+    font-size: .8rem;
+    color: var(--texto-tenue);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Punto de estado: verde cuando captura, gris en reposo. */
+.estado {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .85rem;
+    color: var(--texto-tenue);
+}
+
+.punto {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--texto-tenue);
+}
+
+.punto.activo {
+    background: var(--ok);
+    box-shadow: 0 0 0 4px rgb(74 222 128 / .18);
+}
+
+/* ------------------------------------------------------------------ botones -- */
+
+button {
+    font: inherit;
+    border-radius: var(--radio);
+    border: 1px solid var(--borde);
+    background: var(--superficie-alta);
+    color: var(--texto);
+    padding: .55rem 1.1rem;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+
+button:hover:not(:disabled) { border-color: var(--acento); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+
+button.principal {
+    background: var(--acento);
+    border-color: var(--acento);
+    color: #06121f;
+    font-weight: 600;
+}
+
+button.principal.detener {
+    background: var(--alerta);
+    border-color: var(--alerta);
+}
+
+button.discreto {
+    background: transparent;
+    padding: .35rem .7rem;
+    font-size: .85rem;
+    color: var(--texto-tenue);
+}
+
+/* --------------------------------------------------------------- subtítulos -- */
+
+.subtitulos {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    min-height: 45vh;
+    background: var(--superficie);
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    /* Tamaño controlado por el alumno mediante --escala. */
+    font-size: calc(1.5rem * var(--escala, 1));
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;   /* lo último dicho, siempre abajo y visible */
+    gap: .9rem;
+    overflow-y: auto;
+    max-height: 65vh;
+}
+
+.subtitulos .vacio {
+    color: var(--texto-tenue);
+    font-size: 1rem;
+    text-align: center;
+    margin: auto;
+}
+
+.segmento { margin: 0; }
+
+/* El último segmento destaca; los anteriores se atenúan para dar sensación de flujo
+   sin que el alumno pierda el contexto reciente. */
+.segmento:not(:last-child) { opacity: .55; }
+.segmento.parcial { opacity: .45; font-style: italic; }
+
+mark {
+    background: var(--resalte);
+    color: var(--resalte-texto);
+    padding: 0 .18em;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+.latencia-seg {
+    font-size: .55em;
+    color: var(--texto-tenue);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ paneles -- */
+
+.panel {
+    background: var(--superficie);
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    padding: 1rem 1.15rem;
+    margin-bottom: 1rem;
+}
+
+.panel h2 {
+    font-size: .95rem;
+    margin: 0 0 .75rem;
+    color: var(--texto-tenue);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.metricas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: .9rem;
+}
+
+.metrica {
+    background: var(--superficie-alta);
+    border-radius: 8px;
+    padding: .7rem .85rem;
+}
+
+.metrica .etiqueta {
+    font-size: .72rem;
+    color: var(--texto-tenue);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.metrica .valor {
+    font-size: 1.35rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.metrica .valor.alerta { color: var(--alerta); }
+
+textarea {
+    width: 100%;
+    min-height: 6rem;
+    font: inherit;
+    font-size: .9rem;
+    padding: .6rem .75rem;
+    background: var(--fondo);
+    color: var(--texto);
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    resize: vertical;
+}
+
+textarea:focus, button:focus-visible {
+    outline: 2px solid var(--acento);
+    outline-offset: 2px;
+}
+
+.ayuda {
+    font-size: .82rem;
+    color: var(--texto-tenue);
+    margin: .5rem 0 0;
+}
+
+.fila {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .6rem;
+}
+
+.etiquetas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    margin-top: .6rem;
+}
+
+.termino {
+    background: var(--superficie-alta);
+    border: 1px solid var(--borde);
+    border-radius: 999px;
+    padding: .15rem .7rem;
+    font-size: .82rem;
+}
+
+.error {
+    background: rgb(248 113 113 / .12);
+    border: 1px solid var(--alerta);
+    color: #fecaca;
+    border-radius: var(--radio);
+    padding: .7rem 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Respeta la preferencia del sistema: algunos usuarios necesitan fondo claro. */
+@media (prefers-color-scheme: light) {
+    :root {
+        --fondo: #f6f7f9;
+        --superficie: #ffffff;
+        --superficie-alta: #eef1f5;
+        --borde: #d3d9e2;
+        --texto: #14161a;
+        --texto-tenue: #5b6472;
+        --acento: #0a66c2;
+        --resalte-texto: #2a2100;
+    }
+    button.principal { color: #fff; }
 }
 
 .blazor-error-boundary {
-    background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=) no-repeat 1rem/1.8rem, #b32121;
-    padding: 1rem 1rem 1rem 3.7rem;
-    color: white;
-}
-
-    .blazor-error-boundary::after {
-        content: "An error has occurred."
-    }
-
-.darker-border-checkbox.form-check-input {
-    border-color: #929292;
-}
-
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-    color: var(--bs-secondary-color);
-    text-align: end;
-}
-
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-    text-align: start;
+    background: var(--alerta);
+    padding: 1rem;
+    color: #fff;
 }

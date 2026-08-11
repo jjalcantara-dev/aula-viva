@@ -13,7 +13,7 @@ namespace Accesibilidad.Core;
 /// <para>El método es el estándar: buscar el mayor solape entre el final del texto
 /// acumulado y el principio del nuevo, y recortarlo.</para>
 /// </summary>
-public static class Solapamiento
+public static class OverlapMerger
 {
     /// <summary>
     /// Máximo de palabras que se buscan como solape. Limita el coste y evita falsos
@@ -29,7 +29,7 @@ public static class Solapamiento
     private const int MinimoParaTolerancia = 3;
 
     /// <summary>Palabras nuevas de <paramref name="nuevo"/> tras descartar el solape.</summary>
-    public static string Fusionar(string anterior, string nuevo)
+    public static string Merge(string anterior, string nuevo)
     {
         if (string.IsNullOrWhiteSpace(anterior)) return nuevo.Trim();
         if (string.IsNullOrWhiteSpace(nuevo)) return string.Empty;
@@ -70,7 +70,7 @@ public static class Solapamiento
         {
             // Se comparan formas normalizadas: el modelo puntúa y capitaliza distinto
             // en cada ventana, y comparar en crudo no detectaría el solape.
-            if (Glosario.Normalizar(cola[^(k - i)]) != Glosario.Normalizar(cabeza[i]))
+            if (Glossary.Normalize(cola[^(k - i)]) != Glossary.Normalize(cabeza[i]))
             {
                 if (++fallos > 1) return fallos;
             }

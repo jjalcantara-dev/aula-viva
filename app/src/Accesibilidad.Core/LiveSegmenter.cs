@@ -1,16 +1,24 @@
 namespace Accesibilidad.Core;
 
 /// <summary>Ajustes del segmentador. Los valores por defecto vienen de exp-102.</summary>
-public sealed class OpcionesSegmentacion
+public sealed class SegmentationOptions
 {
     /// <summary>Duración máxima antes de cortar por la fuerza. Acota el peor caso.</summary>
-    public double MaximoSegundos { get; set; } = 8.0;
+    public double MaxSeconds { get; set; } = 6.0;
 
     /// <summary>Duración mínima: por debajo, el modelo se queda sin contexto acústico.</summary>
-    public double MinimoSegundos { get; set; } = 1.5;
+    public double MinSeconds { get; set; } = 1.5;
 
-    /// <summary>Pausa que se considera frontera de frase. Más corta es respiración.</summary>
-    public double SilencioMinimoSegundos { get; set; } = 0.3;
+    /// <summary>
+    /// Pausa que se considera frontera de frase. Más corta es respiración.
+    /// <para>
+    /// 300 ms es el valor que midió exp-102 sobre audio real (12.48% de WER, el mejor del
+    /// barrido). La práctica habitual del sector usa 600 ms para dar por terminada una
+    /// intervención: corta menos veces en mitad de frase, a costa de más latencia. Si el
+    /// diagnóstico de la interfaz muestra cortes en mitad de sintagma, subirlo.
+    /// </para>
+    /// </summary>
+    public double MinSilenceSeconds { get; set; } = 0.3;
 
     /// <summary>
     /// Fracción del nivel de voz por debajo de la cual se considera silencio.
@@ -21,8 +29,15 @@ public sealed class OpcionesSegmentacion
     /// el hablante lleva unos segundos sin parar, el percentil 25 ya es voz y el sistema
     /// se cree en silencio permanente. Detectado por las pruebas.
     /// </para>
+    /// <para>
+    /// 0.35 es el valor validado en exp-102. Requiere que el control automático de
+    /// ganancia del navegador esté DESACTIVADO: con AGC, al callar el hablante la
+    /// ganancia sube, el ruido de fondo se amplifica y la energía nunca baja lo
+    /// suficiente. Medido en uso real, con AGC activo prácticamente todos los segmentos
+    /// se cerraban por agotar el tope en lugar de por pausa.
+    /// </para>
     /// </summary>
-    public double FactorSilencio { get; set; } = 0.35;
+    public double SilenceFactor { get; set; } = 0.35;
 }
 
 /// <summary>
@@ -39,13 +54,13 @@ public sealed class OpcionesSegmentacion
 /// adapta solo al ruido de la sala — el nivel de fondo de un aula no es el de un estudio,
 /// y puede cambiar durante la clase.</para>
 /// </summary>
-public sealed class SegmentadorEnVivo(int frecuencia, OpcionesSegmentacion? opciones = null)
+public sealed class LiveSegmenter(int frecuencia, SegmentationOptions? opciones = null)
 {
     private const int MsPorTrama = 20;
     /// <summary>Tramas recientes para estimar el nivel de fondo (unos 5 segundos).</summary>
     private const int TramasHistorial = 250;
 
-    private readonly OpcionesSegmentacion _op = opciones ?? new OpcionesSegmentacion();
+    private readonly SegmentationOptions _op = opciones ?? new SegmentationOptions();
     private readonly int _muestrasPorTrama = frecuencia * MsPorTrama / 1000;
     private readonly List<byte> _acumulado = [];
     private readonly Queue<double> _historial = new();
@@ -53,14 +68,24 @@ public sealed class SegmentadorEnVivo(int frecuencia, OpcionesSegmentacion? opci
     private int _tramasSilencioSeguidas;
     private int _restoMuestras;
 
+    /// <summary>Segmentos cerrados al detectar una pausa. Es el comportamiento deseado.</summary>
+    public int CutsBySilence { get; private set; }
+
+    /// <summary>
+    /// Segmentos cerrados por agotar el tope de duración. Si domina esta cifra, el
+    /// detector de silencios NO está funcionando y el sistema se comporta como si
+    /// troceara por reloj — que es justo lo que exp-102 midió como peor opción.
+    /// </summary>
+    public int CutsByTimeout { get; private set; }
+
     /// <summary>Segundos de audio acumulados sin emitir.</summary>
-    public double SegundosAcumulados => _acumulado.Count / 2.0 / frecuencia;
+    public double BufferedSeconds => _acumulado.Count / 2.0 / frecuencia;
 
     /// <summary>
     /// Añade audio y devuelve un segmento si toca cortar, o <c>null</c> si hay que seguir
     /// acumulando.
     /// </summary>
-    public byte[]? Añadir(ReadOnlySpan<byte> pcm)
+    public byte[]? Add(ReadOnlySpan<byte> pcm)
     {
         foreach (var b in pcm) _acumulado.Add(b);
 
@@ -76,10 +101,10 @@ public sealed class SegmentadorEnVivo(int frecuencia, OpcionesSegmentacion? opci
         }
 
         var silencioSuficiente = _tramasSilencioSeguidas * MsPorTrama / 1000.0
-                                 >= _op.SilencioMinimoSegundos;
+                                 >= _op.MinSilenceSeconds;
 
-        if (SegundosAcumulados >= _op.MaximoSegundos ||
-            (silencioSuficiente && SegundosAcumulados >= _op.MinimoSegundos))
+        if (BufferedSeconds >= _op.MaxSeconds ||
+            (silencioSuficiente && BufferedSeconds >= _op.MinSeconds))
         {
             return Cortar();
         }
@@ -87,7 +112,7 @@ public sealed class SegmentadorEnVivo(int frecuencia, OpcionesSegmentacion? opci
     }
 
     /// <summary>Devuelve lo que quede pendiente. Para no perder el final de una intervención.</summary>
-    public byte[]? Vaciar() => _acumulado.Count > 0 ? Cortar() : null;
+    public byte[]? Flush() => _acumulado.Count > 0 ? Cortar() : null;
 
     private byte[] Cortar()
     {
@@ -121,6 +146,6 @@ public sealed class SegmentadorEnVivo(int frecuencia, OpcionesSegmentacion? opci
     {
         if (_historial.Count < TramasHistorial / 5) return 0;
         var ordenadas = _historial.Order().ToArray();
-        return ordenadas[ordenadas.Length / 2] * _op.FactorSilencio;
+        return ordenadas[ordenadas.Length / 2] * _op.SilenceFactor;
     }
 }
