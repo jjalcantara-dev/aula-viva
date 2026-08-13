@@ -2,7 +2,9 @@
 % No editar a mano.
 \begin{table}[h]
 \centering
-\small
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{|l|l|l|r|r|r|r|r|r|r|}
     \hline
     \textbf{Corpus} & \textbf{Variedad} & \textbf{Registro} & \textbf{tiny} & \textbf{base} & \textbf{small} & \textbf{medium} & \textbf{large--v3--turbo} & \textbf{large--v3} & \textbf{$\Delta$ tildes} \\
@@ -14,7 +16,7 @@
     \texttt{mediaspeech-es} & Peninsular & Medios, locución & -- & -- & 15.94 & 14.72 & 15.60 & -- & $-$1.70 \\
     \texttt{voxpopuli-es} & Peninsular & Parlamentario & -- & -- & 12.01 & 10.44 & 11.53 & -- & $-$0.07 \\
     \hline
-\end{tabular}
+\end{tabular}}
 \caption{WER (\%) de los modelos Whisper sin adaptar segun corpus, con normalizacion
 basica. La columna $\Delta$ tildes indica cuanto baja el WER de \texttt{medium} al
 ignorar la acentuacion: valores altos delatan referencias con tildes omitidas (R11), no

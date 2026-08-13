@@ -123,7 +123,9 @@ def latex(filas) -> str:
 % No editar a mano.
 \\begin{{table}}[h]
 \\centering
-\\small
+\\footnotesize
+\\setlength{{\\tabcolsep}}{{4pt}}
+\\resizebox{{\\textwidth}}{{!}}{{%
 \\begin{{tabular}}{{|l|l|r|r|r|c|r|c|}}
     \\hline
     \\textbf{{Técnica}} & \\textbf{{Corpus}} & \\textbf{{WER base}} &
@@ -132,7 +134,7 @@ def latex(filas) -> str:
     \\hline
 {cuerpo}
     \\hline
-\\end{{tabular}}
+\\end{{tabular}}}}
 \\caption{{Efecto de cada técnica de adaptación sobre el WER (\\%), con diseño pareado.
 $\\Delta$ negativo indica mejora. El intervalo de confianza se obtiene por bootstrap
 remuestreando clips; $p$ corresponde al test de signos sobre los clips que cambian.}}

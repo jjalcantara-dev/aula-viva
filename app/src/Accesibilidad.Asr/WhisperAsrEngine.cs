@@ -48,6 +48,12 @@ public sealed class WhisperAsrEngine : IAsrEngine, ISegmentationDiagnostics
     private readonly WhisperOptions _opciones;
     private LiveSegmenter? _ultimoSegmentador;
 
+    /// <summary>Transcripciones descartadas por parecer inventadas.</summary>
+    public int Descartadas { get; private set; }
+
+    /// <summary>Último descarte, para poder mostrarlo en la interfaz.</summary>
+    public string? UltimoDescarte { get; private set; }
+
     public (int BySilence, int ByTimeout) Cuts =>
         (_ultimoSegmentador?.CutsBySilence ?? 0, _ultimoSegmentador?.CutsByTimeout ?? 0);
 
@@ -90,6 +96,18 @@ public sealed class WhisperAsrEngine : IAsrEngine, ISegmentationDiagnostics
                 continue;   // aún no hay pausa ni se ha alcanzado el tope
 
             var crudo = await EnviarAsync(segmento, frecuencia, ct);
+
+            // Segunda barrera: aunque el segmento tuviera voz, el modelo puede emitir una
+            // muletilla de su entrenamiento o entrar en bucle. Descartarlo es preferible a
+            // mostrar al alumno algo que nadie dijo.
+            if (HallucinationFilter.Motivo(crudo) is { } motivo)
+            {
+                Descartadas++;
+                UltimoDescarte = $"{motivo}: «{crudo.Trim()}»";
+                inicioVentana = null;
+                secuenciaInicial = null;
+                continue;
+            }
 
             // Los cortes caen en silencio, así que no debería haber solape; se mantiene
             // la deduplicación como red de seguridad ante cortes forzados por el tope.

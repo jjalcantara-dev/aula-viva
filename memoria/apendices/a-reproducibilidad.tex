@@ -1,0 +1,89 @@
+\chapter{Reproducibilidad}
+
+Este apéndice recoge lo necesario para reproducir cualquier cifra de la memoria. No es
+documentación de instalación: es la respuesta a la pregunta de si los resultados
+presentados pueden volver a obtenerse y con qué grado de fidelidad.
+
+\section{Entorno de ejecución}
+
+Los experimentos se ejecutaron sobre una tarjeta gráfica AMD con la pila de cómputo ROCm,
+en un sistema Linux. Esta elección tiene una consecuencia que conviene declarar: parte del
+software habitual del campo asume tarjetas de otro fabricante, y algunas implementaciones
+optimizadas para inferencia no estaban disponibles. La comparativa se realizó por tanto
+sobre la implementación de referencia, más lenta pero disponible en ambas plataformas.
+
+El intérprete de Python se creó reutilizando los paquetes del sistema de forma deliberada,
+porque reinstalar la biblioteca de cálculo dentro del entorno aislado rompe el soporte de
+la tarjeta gráfica. Es un detalle menor que causa horas de depuración si se desconoce.
+
+\section{Trazabilidad de los resultados}
+
+Cada ejecución produce un fichero de resultados que registra, junto a las métricas:
+
+\begin{itemize}
+  \item El identificador del commit del código que la produjo.
+  \item Si el árbol de trabajo tenía cambios sin confirmar en ese momento, lo que indica
+        que el commit registrado no basta para reconstruir el estado exacto.
+  \item El resumen criptográfico del manifiesto de corpus empleado, junto con su número de
+        fragmentos.
+  \item La configuración completa: modelo, estrategia de decodificación, semilla,
+        parámetros del experimento y versiones de las bibliotecas relevantes.
+\end{itemize}
+
+El tercer punto se incorporó tras un incidente. Al ampliar un corpus se sobrescribió su
+manifiesto, y los resultados anteriores quedaron apuntando a un fichero cuyo contenido ya
+era distinto sin que nada lo advirtiera. El resumen criptográfico permite detectar esa
+discrepancia; posteriormente se añadió también la posibilidad de que varias muestras de la
+misma fuente coexistan, que la previene.
+
+\section{Identidad de un resultado}
+
+Los ficheros de resultados se nombran según el modelo, el corpus y la estrategia de
+decodificación empleados. Esta última forma parte del nombre porque se comprobó que dos
+ejecuciones idénticas salvo por ese parámetro producían tasas de error que diferían en más
+de doce puntos. Un resultado identificado únicamente por modelo y corpus habría permitido
+comparar cifras no comparables.
+
+La regla general que se derivó: cualquier eje de variación que se introduzca debe
+incorporarse al nombre del resultado, no solo a su contenido.
+
+\section{Generación de tablas y figuras}
+
+Ninguna cifra de esta memoria se ha transcrito manualmente. Las tablas y figuras se generan
+mediante programas que leen los ficheros de resultados y producen directamente el código
+LaTeX o el gráfico correspondiente, que la memoria incorpora por inclusión.
+
+La consecuencia práctica es que regenerar los informes tras una nueva ejecución actualiza
+la memoria sin intervención. La consecuencia metodológica es más relevante: una cifra
+copiada a mano deja de estar vinculada a la ejecución que la produjo en el momento en que
+se copia, y no hay forma de detectar la divergencia posterior.
+
+\section{Verificaciones previas}
+
+Tres comprobaciones se ejecutan antes de dar por válido un resultado, y las tres surgieron
+de errores que no producían ningún fallo visible.
+
+\textbf{Verificación de la tarjeta gráfica.} No basta con comprobar que el sistema la
+detecta: se verifica que calcula correctamente y que completa un ciclo de entrenamiento con
+descenso efectivo de la función de pérdida.
+
+\textbf{Verificación del entrenamiento.} Antes de evaluar un modelo ajustado se comprueba
+que la función de pérdida se encuentra en el rango esperado y que desciende entre épocas.
+Un ajuste con las etiquetas mal alineadas termina sin errores, guarda su resultado y
+produce métricas evaluables; solo el valor absoluto de la pérdida lo delata.
+
+\textbf{Verificación del procesamiento por lotes.} Agrupar fragmentos acelera
+sustancialmente los barridos, pero solo es admisible si no altera las transcripciones. Se
+comprueba comparándolas con las obtenidas de una en una. Una optimización que cambia los
+resultados no es una optimización: es un factor de confusión.
+
+\section{Estructura del repositorio}
+
+El trabajo separa estrictamente el material de investigación del de la aplicación; ambos
+no comparten código y se comunican mediante una interfaz documentada. Cada experimento
+reside en su propia carpeta, con el programa que lo ejecuta, una descripción de su
+hipótesis y su diseño, y sus resultados.
+
+Los manifiestos de corpus se versionan; el audio no. Un manifiesto contiene las rutas, las
+transcripciones de referencia, las duraciones y los metadatos disponibles, de modo que el
+material puede reconstruirse desde su fuente original sin almacenar los ficheros de sonido.

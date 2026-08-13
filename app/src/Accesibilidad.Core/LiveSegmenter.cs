@@ -68,6 +68,19 @@ public sealed class LiveSegmenter(int frecuencia, SegmentationOptions? opciones 
     private int _tramasSilencioSeguidas;
     private int _restoMuestras;
 
+    /// <summary>
+    /// Proporción mínima de tramas con voz para que merezca la pena transcribir. Enviar
+    /// al modelo un segmento casi vacío es lo que provoca que invente: sobre silencio,
+    /// Whisper emite las frases más frecuentes de su entrenamiento.
+    /// </summary>
+    private const double ProporcionVozMinima = 0.15;
+
+    private int _tramasConVoz;
+    private int _tramasTotales;
+
+    /// <summary>Segmentos descartados por no contener voz suficiente.</summary>
+    public int DiscardedAsSilence { get; private set; }
+
     /// <summary>Segmentos cerrados al detectar una pausa. Es el comportamiento deseado.</summary>
     public int CutsBySilence { get; private set; }
 
@@ -97,7 +110,10 @@ public sealed class LiveSegmenter(int frecuencia, SegmentationOptions? opciones 
             _historial.Enqueue(energia);
             if (_historial.Count > TramasHistorial) _historial.Dequeue();
 
-            _tramasSilencioSeguidas = energia < UmbralSilencio() ? _tramasSilencioSeguidas + 1 : 0;
+            var esSilencio = energia < UmbralSilencio();
+            _tramasSilencioSeguidas = esSilencio ? _tramasSilencioSeguidas + 1 : 0;
+            _tramasTotales++;
+            if (!esSilencio) _tramasConVoz++;
         }
 
         var silencioSuficiente = _tramasSilencioSeguidas * MsPorTrama / 1000.0
@@ -120,6 +136,8 @@ public sealed class LiveSegmenter(int frecuencia, SegmentationOptions? opciones 
         _acumulado.Clear();
         _restoMuestras = 0;
         _tramasSilencioSeguidas = 0;
+        _tramasConVoz = 0;
+        _tramasTotales = 0;
         // El historial NO se reinicia: el nivel de ruido de la sala es continuo y
         // reestimarlo desde cero en cada corte daría umbrales erráticos.
         return segmento;

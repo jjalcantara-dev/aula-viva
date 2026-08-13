@@ -1,0 +1,10 @@
+# Dependencias del servicio de transcripcion.
+#
+# NO incluye torch: lo aporta la imagen base, que es la que determina si se ejecuta sobre
+# CUDA o sobre ROCm. Instalarlo aqui sobrescribiria la version compilada para la
+# plataforma y romperia el soporte de GPU; es el mismo motivo por el que el entorno local
+# se crea reutilizando los paquetes del sistema.
+transformers>=4.44
+accelerate>=0.34
+peft>=0.13
+numpy>=1.26

@@ -2,7 +2,9 @@
 % No editar a mano.
 \begin{table}[h]
 \centering
-\small
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{|l|l|r|r|r|c|r|c|}
     \hline
     \textbf{Técnica} & \textbf{Corpus} & \textbf{WER base} &
@@ -18,7 +20,7 @@
     Post-corrección con LLM & \texttt{voxpopuli-es} & 12.50 & 12.15 & -0.35 & [-1.69, +1.12] & 1.000 & No \\
     Fine-tuning con LoRA & \texttt{voxpopuli-es-400} & 9.63 & 8.40 & -1.23 & [-1.75, -0.77] & 0.000 & Sí \\
     \hline
-\end{tabular}
+\end{tabular}}
 \caption{Efecto de cada técnica de adaptación sobre el WER (\%), con diseño pareado.
 $\Delta$ negativo indica mejora. El intervalo de confianza se obtiene por bootstrap
 remuestreando clips; $p$ corresponde al test de signos sobre los clips que cambian.}

@@ -35,6 +35,25 @@ DECODIFICACION = dict(
     return_timestamps=True,
 )
 
+def elegir_dispositivo(dtype_pedido: str) -> tuple[str, "torch.dtype"]:
+    """Selecciona el acelerador disponible y el tipo numerico que le conviene.
+
+    Tres plataformas, y la eleccion del tipo no es intercambiable entre ellas:
+
+      cuda  NVIDIA, y tambien AMD con ROCm: PyTorch expone ROCm bajo el mismo nombre.
+      mps   Apple Silicon (M1 y posteriores). Metal NO implementa float16 para todas las
+            operaciones de Whisper, asi que se fuerza float32; con float16 la inferencia
+            falla o produce silencio.
+      cpu   Ultimo recurso. Medido en exp-101: whisper-medium alcanza 1.6x tiempo real,
+            insuficiente para subtitulado en vivo una vez descontado el troceado.
+    """
+    if torch.cuda.is_available():
+        return "cuda", getattr(torch, dtype_pedido)
+    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        return "mps", torch.float32
+    return "cpu", torch.float32
+
+
 ESTADO: dict = {}
 CERROJO = Lock()  # la GPU no se comparte bien entre peticiones simultaneas
 
@@ -114,8 +133,7 @@ def main():
 
     from transformers import AutoProcessor, WhisperForConditionalGeneration
 
-    dispositivo = "cuda" if torch.cuda.is_available() else "cpu"
-    dtype = getattr(torch, args.dtype) if dispositivo == "cuda" else torch.float32
+    dispositivo, dtype = elegir_dispositivo(args.dtype)
 
     print(f"cargando {args.modelo} en {dispositivo}...")
     modelo = WhisperForConditionalGeneration.from_pretrained(

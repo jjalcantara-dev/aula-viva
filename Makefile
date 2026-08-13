@@ -9,6 +9,10 @@ MODELO  := openai/whisper-medium
 CORPUS  := voxpopuli_es
 MANIF   := research/corpus/manifests/$(CORPUS).jsonl
 RESULT  := research/experiments/exp-000-baseline/results
+# Evita que el equipo se suspenda durante operaciones largas. Una descarga de 19 GB o un
+# barrido de una hora se pierden enteros si la sesion se duerme a la mitad; ya ocurrio.
+DESPIERTO := systemd-inhibit --what=idle:sleep:shutdown --why="TFM en curso"
+
 PUERTO_ASR := 5601
 PUERTO_APP := 5203
 # IP de la interfaz por la que sale el tráfico: la que deben teclear los alumnos.
@@ -16,7 +20,7 @@ IP_LOCAL := $(shell ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K[\d.]+' |
 
 .DEFAULT_GOAL := ayuda
 .PHONY: ayuda entorno gpu test app asr demo parar corpus baseline \
-        direcciones demo-lora exp-001 exp-002 exp-003 exp-100 exp-102 exp-103 exp-104 tablas estado limpiar
+        direcciones demo-lora docker-amd docker-nvidia docker-parar exp-001 exp-002 exp-003 exp-100 exp-102 exp-103 exp-104 tablas estado limpiar
 
 ayuda:  ## Muestra esta ayuda
 	@echo "TFM — atajos disponibles:"
@@ -88,37 +92,50 @@ corpus:  ## Descarga muestras de corpus (N=40 por defecto)
 # ------------------------------------------------------- experimentos --
 
 baseline:  ## exp-000: Whisper sin adaptar (usa MODELO y CORPUS)
-	$(PY) research/experiments/exp-000-baseline/run.py \
+	$(DESPIERTO) $(PY) research/experiments/exp-000-baseline/run.py \
 	    --manifiesto $(MANIF) --modelo $(MODELO) --lote 8 --decodificacion fallback
 
 exp-001:  ## Prompting contextual con glosario de dominio
-	$(PY) research/experiments/exp-001-prompting/run.py \
+	$(DESPIERTO) $(PY) research/experiments/exp-001-prompting/run.py \
 	    --manifiesto $(MANIF) --modelo $(MODELO)
 
 exp-002:  ## Post-corrección con LLM (requiere transcripciones de baseline)
-	$(PY) research/experiments/exp-002-postcorreccion/run.py \
+	$(DESPIERTO) $(PY) research/experiments/exp-002-postcorreccion/run.py \
 	    --transcripciones $(RESULT)/transcripciones_$(subst /,_,$(MODELO))__$(CORPUS)__fallback.jsonl \
 	    --limite $(or $(N),400)
 
 exp-003:  ## Ajuste fino con LoRA: entrena el adaptador y lo evalúa
-	$(PY) research/experiments/exp-003-lora/entrenar.py --epocas $(or $(EPOCAS),2)
-	$(PY) research/experiments/exp-003-lora/run.py
+	$(DESPIERTO) $(PY) research/experiments/exp-003-lora/entrenar.py --epocas $(or $(EPOCAS),2)
+	$(DESPIERTO) $(PY) research/experiments/exp-003-lora/run.py
 
 exp-100:  ## Barrido de tamaño de ventana (latencia frente a calidad)
-	$(PY) research/experiments/exp-100-ventana/run.py \
+	$(DESPIERTO) $(PY) research/experiments/exp-100-ventana/run.py \
 	    --manifiesto $(MANIF) --modelo $(MODELO) --limite 40 --solape 0
 
 exp-102:  ## Segmentación por silencios frente a ventana fija
-	$(PY) research/experiments/exp-102-vad/run.py \
+	$(DESPIERTO) $(PY) research/experiments/exp-102-vad/run.py \
 	    --manifiesto $(MANIF) --modelo $(MODELO) --limite 40
 
 exp-103:  ## ¿Ayuda arrastrar la transcripción anterior como contexto?
-	$(PY) research/experiments/exp-103-contexto/run.py \
+	$(DESPIERTO) $(PY) research/experiments/exp-103-contexto/run.py \
 	    --manifiesto $(MANIF) --modelo $(MODELO) --limite 40
 
 exp-104:  ## Robustez frente al ruido de aula (barrido de SNR)
-	$(PY) research/experiments/exp-104-ruido/run.py \
+	$(DESPIERTO) $(PY) research/experiments/exp-104-ruido/run.py \
 	    --manifiesto $(MANIF) --modelo $(MODELO) --limite 40
+
+# ------------------------------------------------------ contenedores --
+
+docker-amd:  ## Levanta el sistema en contenedores sobre GPU AMD (ROCm)
+	@$(MAKE) --no-print-directory direcciones
+	$(DESPIERTO) docker compose --profile amd up --build
+
+docker-nvidia:  ## Levanta el sistema en contenedores sobre GPU NVIDIA (CUDA)
+	@$(MAKE) --no-print-directory direcciones
+	$(DESPIERTO) docker compose --profile nvidia up --build
+
+docker-parar:  ## Detiene los contenedores sin borrar el modelo descargado
+	-docker compose --profile amd --profile nvidia down
 
 # --------------------------------------------------------- informes --
 

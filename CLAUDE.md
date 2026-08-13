@@ -40,7 +40,7 @@ make parar         # mata servicios y experimentos sueltos
 make tablas        # regenera TODAS las tablas y figuras de la memoria
 ```
 
-Experimentos: `make baseline`, `make exp-001` … `make exp-104`. `make` los lista todos con
+Experimentos: `make baseline`, `make exp-001` … `make exp-104` (nueve experimentos). `make` los lista todos con
 la pregunta que responde cada uno.
 Aceptan variables: `make baseline MODELO=openai/whisper-small CORPUS=tedx_es`.
 
@@ -70,8 +70,8 @@ no abrir el puerto del router: la restricción la impone la propia aplicación.
 
 ### La frontera entre investigación y aplicación
 
-`research/` y `app/` **no comparten código**. La aplicación depende solo de `IMotorAsr`
-(`app/src/Accesibilidad.Core/ContratoAsr.cs`). Eso permite enseñar una demo mientras la
+`research/` y `app/` **no comparten código**. La aplicación depende solo de `IAsrEngine`
+(`app/src/Accesibilidad.Core/AsrContract.cs`). Eso permite enseñar una demo mientras la
 comparativa sigue en curso, y sustituir la técnica ganadora al final sin tocar la app.
 
 `serving/servidor_asr.py` es el puente: un servicio HTTP mínimo que carga Whisper (PyTorch
@@ -79,8 +79,10 @@ con ROCm solo existe en Python; .NET no puede cargarlo). **Usa la misma configur
 decodificación que los experimentos** — si la app decodificara distinto, los resultados
 medidos no describirían el sistema desplegado.
 
-Los motores se componen por decoración: `MotorConResaltado` envuelve a cualquier `IMotorAsr`
-para añadir el glosario. Así el resaltado no contamina la comparación entre técnicas.
+Los motores se componen por decoración: `HighlightingAsrEngine` envuelve a cualquier
+`IAsrEngine` para añadir el glosario. Así el resaltado no contamina la comparación entre
+técnicas. **Cuidado**: eso hace que un `is TipoConcreto` desde `IAsrEngine` nunca se cumpla;
+las capacidades opcionales van en interfaces propias que los decoradores reenvían.
 
 ### Numeración de experimentos
 
@@ -189,3 +191,9 @@ de kernels desde Python, no el cálculo. Mover el mel a GPU o limitar hilos **no
 
 `app/` requiere el runtime de ASP.NET Core, que en Arch/CachyOS no viene con el SDK:
 `sudo pacman -S aspnet-runtime-10.0 aspnet-targeting-pack-10.0`.
+
+El servicio de `serving/` selecciona acelerador en este orden: `cuda` (NVIDIA y también
+AMD, porque PyTorch expone ROCm con ese nombre), `mps` (Apple Silicon, forzando `float32`
+porque Metal no cubre `float16` en todas las operaciones de Whisper) y `cpu`. Los scripts
+de `research/` **siguen fijando cuda o cpu**: se ejecutan en el equipo de desarrollo y
+añadir MPS ahí cambiaría resultados ya medidos.

@@ -93,14 +93,16 @@ def latex(datos, modelos) -> str:
 % No editar a mano.
 \\begin{{table}}[h]
 \\centering
-\\small
+\\footnotesize
+\\setlength{{\\tabcolsep}}{{4pt}}
+\\resizebox{{\\textwidth}}{{!}}{{%
 \\begin{{tabular}}{{{cols}}}
     \\hline
     {cab} \\\\
     \\hline
 {cuerpo}
     \\hline
-\\end{{tabular}}
+\\end{{tabular}}}}
 \\caption{{WER (\\%) de los modelos Whisper sin adaptar segun corpus, con normalizacion
 basica. La columna $\\Delta$ tildes indica cuanto baja el WER de \\texttt{{medium}} al
 ignorar la acentuacion: valores altos delatan referencias con tildes omitidas (R11), no

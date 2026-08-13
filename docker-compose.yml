@@ -1,0 +1,94 @@
+# Despliegue del sistema de subtitulado en un centro educativo.
+#
+# Dos servicios: el que reconoce, que necesita GPU, y el que sirve la interfaz, que no.
+# El fabricante se elige por perfil, porque las dos formas de exponer una GPU a un
+# contenedor son incompatibles entre si:
+#
+#   docker compose --profile amd    up --build
+#   docker compose --profile nvidia up --build
+#
+# AMBOS CONTENEDORES COMPARTEN LA RED DEL ANFITRION. Es una decision, no un descuido:
+#
+#   1. Publicar puertos exige que Docker cree reglas de redireccion con DNAT. Los kernels
+#      recientes de Arch y derivadas no incluyen los modulos de compatibilidad de iptables
+#      que eso necesita (xt_nat, iptable_nat), y el backend nativo de nftables de Docker
+#      falla al inicializar sus tablas. Comprobado sobre kernel 7.1.6.
+#   2. Aun funcionando, el aislamiento de red no aportaria nada aqui: el sistema sirve a
+#      la red local del aula de todos modos, y la restriccion de acceso la impone la
+#      propia aplicacion, no la topologia de contenedores.
+#
+# Reparto resultante: el reconocedor escucha solo en bucle local, y la aplicacion en todas
+# las interfaces. Que es exactamente lo que se quiere.
+
+services:
+
+  asr-amd:
+    profiles: ["amd"]
+    build:
+      context: .
+      dockerfile: docker/asr.Dockerfile
+      args:
+        BASE: rocm/pytorch:latest
+    environment:
+      MODELO: ${MODELO:-openai/whisper-medium}
+      # Ruta al adaptador de exp-003 dentro del contenedor; vacío sirve el modelo base.
+      ADAPTADOR: ${ADAPTADOR:-}
+    volumes:
+      - cache-modelos:/cache/huggingface
+      - ./research/experiments/exp-003-lora/adaptador:/adaptador:ro
+    devices:
+      - /dev/kfd    # interfaz de cómputo de ROCm
+      - /dev/dri    # acceso directo al hardware gráfico
+    # Identificadores NUMERICOS del anfitrion, no nombres: los grupos "video" y "render"
+    # pueden no existir dentro de la imagen, y entonces el contenedor no arranca. Estos
+    # valores son los de este equipo; en otro anfitrion pueden diferir y hay que
+    # comprobarlos con: getent group video render
+    group_add: ["983", "987"]
+    security_opt: ["seccomp:unconfined"]
+    ipc: host
+    network_mode: host
+    restart: unless-stopped
+
+  asr-nvidia:
+    profiles: ["nvidia"]
+    build:
+      context: .
+      dockerfile: docker/asr.Dockerfile
+      args:
+        BASE: pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+    environment:
+      MODELO: ${MODELO:-openai/whisper-medium}
+      ADAPTADOR: ${ADAPTADOR:-}
+    volumes:
+      - cache-modelos:/cache/huggingface
+      - ./research/experiments/exp-003-lora/adaptador:/adaptador:ro
+    # Requiere el conjunto de herramientas de contenedores de NVIDIA en el anfitrión.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    network_mode: host
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/app.Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:${PUERTO_APP:-5203}
+      Asr__Motor: whisper
+      # Compartiendo red con el reconocedor, se alcanza por bucle local.
+      Asr__Url: http://127.0.0.1:5601
+      Aula__SoloRedLocal: "true"
+      Aula__ClaveDocente: ${CLAVE_DOCENTE:-}
+    network_mode: host
+    restart: unless-stopped
+
+volumes:
+  # El modelo pesa varios gigabytes; sin volumen se descargaría en cada arranque.
+  cache-modelos:
+  # Claves de cifrado de la aplicación; ver el comentario en el servicio.
+  claves-app:

@@ -19,9 +19,10 @@ Máster en Inteligencia Artificial · UNIR · modalidad individual
 | `memoria/` | Memoria en LaTeX sobre la plantilla oficial de UNIR |
 | `docs/` | Trazabilidad del proceso: decisiones, actas, preguntas |
 | `tools/` | Verificación de entorno y bancos de pruebas |
+| `docker/` | Imágenes para desplegar sobre GPU AMD o NVIDIA |
 
 **`research/` y `app/` no comparten código.** Se comunican por el contrato del servicio
-ASR (`Accesibilidad.Core/ContratoAsr.cs`). Eso mantiene separables la contribución
+ASR (`Accesibilidad.Core/AsrContract.cs`). Eso mantiene separables la contribución
 investigadora y la ingeniería, tanto en el repositorio como en la defensa.
 
 ### Experimentos
@@ -32,6 +33,7 @@ investigadora y la ingeniería, tanto en el repositorio como en la defensa.
 | `exp-001-prompting` | ¿Ayuda un glosario del dominio como prompt contextual? |
 | `exp-002-postcorreccion` | ¿Puede un LLM local reparar los errores del ASR? |
 | `exp-100-ventana` | ¿Cuánto WER cuesta cada segundo de latencia que se ahorra? |
+| `exp-003-lora` | ¿Mejora el ajuste fino de los pesos del modelo? |
 | `exp-101-dispositivo` | ¿Cuánto aporta realmente la GPU? |
 | `exp-102-vad` | ¿Conviene cortar por silencios en vez de por reloj? |
 | `exp-103-contexto` | ¿Ayuda arrastrar la transcripción anterior entre ventanas? |
@@ -97,6 +99,52 @@ alumno.
 DOCENTE  http://localhost:5203/broadcast     ← el micrófono solo funciona en localhost sin HTTPS
 ALUMNOS  http://<ip-del-equipo>:5203/view    ← desde el móvil, en la misma red
 ```
+
+### Despliegue en contenedores
+
+Para un centro que no quiera montar el entorno a mano, y para no atar el sistema a un
+fabricante de GPU concreto:
+
+```bash
+make docker-amd      # ROCm
+make docker-nvidia   # CUDA
+make docker-parar
+```
+
+La única diferencia entre ambos es la imagen base del servicio de reconocimiento; el
+código es idéntico porque PyTorch expone la misma interfaz sobre las dos plataformas. El
+modelo se descarga una vez y queda en un volumen.
+
+Requisitos del anfitrión: con AMD, pertenecer a los grupos `video` y `render`; con NVIDIA,
+el conjunto de herramientas de contenedores del fabricante. Y el plugin `compose` de
+Docker, que en Arch va en un paquete aparte (`docker-compose`).
+
+**Ambos contenedores comparten la red del anfitrión.** Los kernels recientes de Arch y
+derivadas no incluyen los módulos de compatibilidad de iptables que Docker necesita para
+publicar puertos (`xt_nat`, `iptable_nat`), y su backend nativo de nftables falla al
+inicializar. Compartir red lo evita, y en un despliegue de aula no se pierde aislamiento
+real: el sistema sirve a la red local de todos modos.
+
+### Apple Silicon
+
+| Ejecución | Acelerador | Viable |
+|---|---|---|
+| Nativa (entorno de Python) | **MPS** | Sí |
+| En contenedor | Solo CPU | No |
+
+El servicio detecta MPS automáticamente y fuerza `float32`: Metal no implementa
+`float16` para todas las operaciones de Whisper, y con precisión reducida la inferencia
+falla o devuelve silencio.
+
+En contenedor no hay alternativa: Docker en macOS ejecuta los contenedores dentro de una
+máquina virtual Linux que no expone la GPU de Apple. Quedaría en CPU, y exp-101 midió que
+eso da 1.6× tiempo real con `whisper-medium`, insuficiente para directo.
+
+La aplicación .NET sí funciona en arm64 sin cambios, contenerizada o no.
+
+> ⚠️ Las imágenes están escritas y el fichero de composición validado, pero **no se han
+> construido ni ejecutado**: cada una descarga varios gigabytes de dependencias. Antes de
+> darlo por bueno en un despliegue real hay que probarlo.
 
 ### Restricciones de acceso
 
