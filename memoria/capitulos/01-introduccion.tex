@@ -9,6 +9,23 @@ transcriba en directo, y ambas comparten la misma limitación: dependen de que h
 persona disponible, con formación específica, durante toda la sesión. En la práctica eso
 significa que muchas clases se quedan sin cobertura.
 
+Hay un segundo grupo, mucho más numeroso, para el que el canal tampoco funciona del todo:
+el alumnado que todavía no domina la lengua en la que se imparte la clase. En el sistema
+educativo español no universitario había en el curso 2023-2024 más de un millón de alumnos
+de nacionalidad extranjera, el 12,2\% del total \cite{mefpd2024datos}; una parte
+considerable procede de países donde el castellano no es lengua vehicular. Su dificultad no
+es sensorial sino de velocidad: entienden el vocabulario cuando lo leen y lo pierden cuando
+lo oyen a la velocidad del habla espontánea, con la fonética de un hablante nativo y sin
+posibilidad de volver atrás.
+
+Los dos casos difieren en casi todo menos en lo que necesitan, que es exactamente lo mismo:
+que lo dicho aparezca escrito, en el momento, sin pedírselo a nadie. Y la evidencia de que
+eso ayuda al segundo grupo no es una suposición razonable: está medida, y se recoge en el
+capítulo~\ref{cap:estado}. Conviene decir desde ya que este trabajo \emph{no} ha evaluado
+el sistema con alumnado de ninguno de los dos colectivos; la segunda población se menciona
+porque amplía el alcance de lo construido, no porque el trabajo aporte evidencia sobre
+ella.
+
 El reconocimiento automático del habla ha alcanzado en los últimos años una calidad que
 invita a plantear la alternativa. Los modelos de propósito general funcionan
 razonablemente bien en español sin necesidad de entrenarlos, y el equipamiento necesario
@@ -46,6 +63,39 @@ proporcionó a la aplicación criterios de diseño medidos en lugar de intuidos;
 aplicación detectó a su vez un problema que ningún experimento de laboratorio podía ver,
 porque solo aparece cuando hay un micrófono y un navegador reales de por medio.
 
+\section{Aportaciones}
+
+Conviene adelantar a qué se ha llegado, porque condiciona cómo debe leerse el resto. Cinco
+resultados resumen el trabajo.
+
+\begin{enumerate}
+  \item \textbf{De las tres técnicas de adaptación, solo una mejora.} El ajuste fino con
+        LoRA reduce el error de palabra 1,23 puntos con dos criterios estadísticos de
+        acuerdo. El prompting contextual no produce efecto detectable, y la post-corrección
+        con un modelo de lenguaje \emph{degrada} de forma significativa y replicada sobre
+        dos corpus.
+  \item \textbf{El margen no está donde se suponía.} Segmentar el audio por silencios en
+        lugar de por reloj reduce el error 7,4 puntos a igual latencia media, con los dos
+        mismos criterios estadísticos de acuerdo: seis veces más que la mejor técnica de
+        adaptación, y a coste de cómputo nulo. La premisa de partida del trabajo queda
+        invertida por sus propios datos.
+  \item \textbf{El WER agregado oculta lo que importa en accesibilidad.} Con un 18,61\% de
+        error, cifra que suena tolerable, el sistema pierde o altera el 28\% de las
+        negaciones e introduce trece que nadie pronunció. Se proponen dos métricas
+        complementarias que exponen esos fallos.
+  \item \textbf{El modo de fallo pesa más que la tasa de error al elegir modelo.} El
+        criterio descartó primero a la variante más rápida de la familia elegida, y después
+        a un candidato de arquitectura distinta que ganaba en las métricas pero traducía al
+        inglés ante habla española difícil.
+  \item \textbf{Varias mediciones aparentemente correctas eran falsas.} Se documentan ocho
+        incidentes en los que el procedimiento producía cifras verosímiles y erróneas sin
+        emitir ningún error, y las comprobaciones que se derivaron de ellos.
+\end{enumerate}
+
+En el plano aplicado, el trabajo entrega además un sistema de subtitulado desplegable en la
+red de un centro, con el reconocimiento centralizado en el servidor, y en el que la técnica
+ganadora se incorporó sin modificar una sola línea de la aplicación.
+
 \section{Estructura del trabajo}
 
 El capítulo~\ref{cap:estado} sitúa el trabajo respecto a la literatura y a la práctica del
@@ -56,9 +106,13 @@ capítulo~\ref{cap:objetivos} enuncia los objetivos y los criterios con los que 
 consideran cumplidos.
 
 El capítulo~\ref{cap:desarrollo} contiene el grueso del trabajo: la metodología
-experimental, los nueve experimentos realizados con sus resultados, y el desarrollo de la
-aplicación. El capítulo~\ref{cap:conclusiones} recoge las conclusiones, las limitaciones
-reconocidas y las líneas que quedan abiertas.
+experimental, los diez experimentos realizados con sus resultados, y el desarrollo de la
+aplicación. El capítulo~\ref{cap:conclusiones} recoge las conclusiones, la verificación de
+los objetivos, las limitaciones reconocidas y las líneas que quedan abiertas. El
+apéndice~\ref{ap:reproducibilidad} documenta cómo regenerar cualquier cifra de la memoria,
+el apéndice~\ref{ap:riesgos} el registro de riesgos que guió la planificación, y el
+apéndice~\ref{ap:despliegue} los pasos concretos para poner el sistema en marcha en un
+centro.
 
 Conviene anticipar una particularidad de este trabajo: buena parte de sus aportaciones no
 proviene de que las técnicas estudiadas funcionaran, sino de descubrir bajo qué condiciones

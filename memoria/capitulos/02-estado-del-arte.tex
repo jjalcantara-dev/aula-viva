@@ -1,6 +1,88 @@
 \chapter{Contexto y Estado del Arte}
 \label{cap:estado}
 
+\section{El problema: subtitular una clase para quien no puede seguirla}
+
+\subsection{El marco normativo}
+
+El derecho a la educación inclusiva de las personas con discapacidad está reconocido en el
+artículo 24 de la Convención de Naciones Unidas sobre los Derechos de las Personas con
+Discapacidad \cite{onu2006cdpd}, ratificada por España, y desarrollado en la legislación
+española por el texto refundido de la Ley General de derechos de las personas con
+discapacidad \cite{espana2013tr}, que obliga a los centros a realizar los ajustes
+razonables necesarios. En la práctica, el ajuste habitual para el alumnado con discapacidad
+auditiva en una clase magistral es humano: un intérprete de lengua de signos o un
+transcriptor en directo.
+
+Existe además una norma que fija qué es un subtítulo aceptable. La UNE
+153010 \cite{aenor2012une153010} establece criterios de velocidad de lectura, segmentación y
+presentación para el subtitulado dirigido a personas sordas. Este trabajo no la aplica como
+requisito de conformidad, porque el sistema desarrollado no es un producto certificable; sí
+la toma como referencia de dos decisiones de interfaz: que el texto se presente en unidades
+sintácticas completas, y que el tamaño lo controle quien lee.
+
+La distancia entre esa norma y lo que un reconocedor automático produce es precisamente el
+objeto del trabajo. Y hay evidencia previa de que la métrica habitual no mide esa distancia:
+al evaluar con personas sordas o con discapacidad auditiva la utilidad de subtítulos
+generados automáticamente, la tasa de error de palabra predice mal la comprensión percibida,
+porque no todos los errores estorban igual \cite{kafle2017captions}. Este trabajo llega a la
+misma conclusión por una vía distinta, midiendo qué unidades léxicas sobreviven.
+
+\subsection{Para quién funciona un subtítulo}
+\label{sec:para-quien}
+
+El colectivo que motiva la norma no es el único que se beneficia, y conviene documentarlo
+porque amplía sustancialmente el alcance de un sistema como el que aquí se construye. La
+revisión de más de cien estudios empíricos recogida por Gernsbacher
+\cite{gernsbacher2015captions} concluye que el subtitulado en la misma lengua mejora la
+comprensión, la atención y la memoria del material audiovisual en general, y que resulta
+\emph{especialmente} útil en tres poblaciones: quienes son sordos o tienen discapacidad
+auditiva, quienes están aprendiendo a leer, y quienes ven el material en una lengua que no
+es la suya.
+
+Sobre esa tercera población la evidencia es cuantitativa y antigua. La observación
+fundacional es de Vanderplank \cite{vanderplank1988teletext}, que documentó cómo aprendices
+de una lengua extranjera explotaban los subtítulos del teletexto para fijar vocabulario que
+no habrían retenido solo escuchando. El metaanálisis de Montero Perez y colaboradores
+\cite{monteroperez2013meta}, sobre dieciocho estudios, encuentra un efecto grande tanto en
+comprensión oral como en adquisición de vocabulario, con un tamaño del efecto de 0,87 para
+esta última. El mecanismo que se propone es el que cabría esperar: el subtítulo ancla la
+cadena sonora a una forma escrita que el aprendiz sí reconoce, y convierte en léxico
+conocido lo que de otro modo pasaría como ruido.
+
+Ahora bien, esa literatura mide casi siempre \emph{vídeo grabado}, y este trabajo construye
+un sistema \emph{en vivo}, que no es lo mismo: no hay posibilidad de pausar, ni de rebobinar,
+ni de ver dos veces, que son precisamente las estrategias que el aprendiz emplea en los
+estudios anteriores. El único trabajo localizado sobre transcripción en directo en un aula
+de segunda lengua \cite{wang2023transcripts} obtiene un resultado más matizado, y merece la
+pena reproducirlo con exactitud: las transcripciones en vivo \textbf{no} mejoraron las
+calificaciones de ningún grupo, pero el alumnado de menor competencia lingüística completó un
+24,6\% más de actividades de clase cuando disponía de ellas. Es decir, el efecto medido en
+directo no aparece en el rendimiento sino en la \emph{participación}: el subtítulo no hace
+que el alumno aprenda más deprisa, hace que pueda seguir la clase en lugar de descolgarse de
+ella.
+
+Esa distinción importa para no sobrevender el sistema. Lo que la evidencia sostiene es que
+un subtítulo en vivo mantiene enganchado a quien de otro modo perdería el hilo; lo que no
+sostiene todavía, porque no está medido, es que acelere el aprendizaje de la lengua en ese
+escenario. Encaja además con lo que se observa en el conjunto del alumnado: en una encuesta
+a 2.124 estudiantes de quince universidades \cite{linder2016captions}, el 98,6\% consideró
+útiles los subtítulos y tres de cada cuatro los usaban como apoyo al estudio, sin tener
+ninguna discapacidad ni cursar en lengua extranjera.
+
+La conclusión que este trabajo extrae de esa literatura es de diseño y no de resultados: un
+sistema de subtitulado de aula tiene una población objetivo bastante mayor que el colectivo
+que lo justifica normativamente, y por tanto tiene sentido que la vista del alumnado sea
+abierta y sin fricción, en lugar de un recurso que haya que solicitar. Es la decisión que se
+describe en el capítulo~\ref{cap:desarrollo}, y esta sección es su fundamento.
+
+Hay una consecuencia menos cómoda, y también se declara aquí. Si el sistema sirve a quien
+está aprendiendo la lengua, entonces los modos de fallo estudiados en este trabajo le afectan
+\emph{más} que al lector nativo, no menos: quien domina el castellano puede reconstruir por
+contexto una negación perdida o un término mal transcrito, y quien lo está aprendiendo,
+no. El argumento a favor de medir lo que el WER agregado esconde se refuerza, por tanto,
+exactamente en la población para la que la evidencia de beneficio es más sólida.
+
 \section{Reconocimiento automático del habla de propósito general}
 
 El punto de partida de este trabajo es Whisper \cite{radford2023whisper}, un modelo
@@ -17,6 +99,27 @@ primera palabra. La adaptación de un modelo pensado para procesamiento por lote
 escenario de flujo continuo es un problema abierto \cite{machacek2023whisperstreaming}, y
 constituye una parte sustancial del trabajo de ingeniería descrito en el
 capítulo~\ref{cap:desarrollo}.
+
+\subsection{Una familia alternativa: los transductores}
+\label{sec:transductores}
+
+Whisper pertenece a la familia codificador-decodificador autorregresiva: genera el texto
+palabra a palabra condicionando cada predicción en las anteriores. Existe una segunda
+familia, el transductor neuronal \cite{graves2012transducer}, que emite símbolos alineados
+con las tramas de audio y no dispone de ese bucle sobre el texto ya generado. Es la
+arquitectura dominante en los sistemas pensados para funcionar en directo, precisamente
+porque no necesita ver la señal completa para empezar a emitir.
+
+Los sistemas recientes de esta familia combinan un codificador convolucional-atencional
+\cite{gulati2020conformer, rekesh2023fastconformer} con una variante del transductor que
+predice conjuntamente los símbolos y su duración \cite{xu2023tdt}, lo que reduce
+drásticamente el número de pasos de decodificación y, con ello, el coste por segundo de
+audio.
+
+Esta sección existe porque el capítulo~\ref{cap:desarrollo} contrasta el modelo elegido con
+un sistema de esta segunda familia. La diferencia arquitectónica no es un detalle
+taxonómico: determina qué se puede controlar del proceso de decodificación, y ese control
+resultó ser el criterio que decidió la comparación.
 
 \section{Técnicas de adaptación al dominio}
 
@@ -56,9 +159,16 @@ transcribió manualmente más de ciento quince horas \cite{deltoro2014translectu
 las tres condiciones que este trabajo necesita: dominio educativo real, lengua española y
 transcripción verificada por personas.
 
-No se encuentra publicado en ningún repositorio de acceso abierto. Se cursó una solicitud
-institucional al grupo responsable, que no obtuvo respuesta dentro del plazo de este
-trabajo. Esta circunstancia es la limitación de fondo de toda la parte experimental.
+% AL ENVIAR LA SOLICITUD: sustituir por «Se cursó una solicitud institucional al grupo
+% responsable, que no obtuvo respuesta dentro del plazo de este trabajo», y anotar la fecha
+% en docs/solicitud-polimedia.md. Hasta entonces, esa frase seria falsa y comprobable.
+No se encuentra publicado en ningún repositorio de acceso abierto, y su sitio web rechazó
+la conexión de forma repetida durante la fase de auditoría de corpus, de modo que no fue
+posible confirmar por esa vía ni el procedimiento de acceso ni la licencia. El repositorio
+público del grupo distribuye otros conjuntos de datos, todos en inglés, pero no este: el
+único camino es la solicitud directa, que queda redactada y dirigida al grupo responsable
+como continuación inmediata del trabajo. Esta circunstancia es la limitación de fondo de
+toda la parte experimental.
 
 \subsection{Los recursos efectivamente empleados}
 
@@ -67,12 +177,23 @@ del problema en lugar de acumular horas.
 
 VoxPopuli \cite{wang2021voxpopuli} aporta discurso parlamentario en español peninsular.
 Presenta dos propiedades que resultaron decisivas: incorpora una marca que identifica las
-transcripciones verificadas manualmente, y anota la variedad dialectal del hablante.
+transcripciones verificadas manualmente, y anota la variedad dialectal del hablante. Es,
+por eso, el único de los cinco sobre el que se realiza el ajuste fino.
 FLEURS \cite{conneau2022fleurs} proporciona voz leída de dominio general, útil como techo
 de calidad; conviene señalar que su configuración en español corresponde a la variedad
-latinoamericana, sin equivalente peninsular. Se emplearon además dos recursos de habla
-espontánea en español de México procedentes de repositorios abiertos, y un conjunto de
-locución de medios en español peninsular.
+latinoamericana, sin equivalente peninsular.
+
+Los dos recursos de habla espontánea proceden del proyecto CIEMPIESS de la Universidad
+Nacional Autónoma de México \cite{hernandezmena2014ciempiess}: un conjunto de charlas
+expositivas y otro de divulgación científica televisiva. Son los que más se acercan al
+registro de una clase magistral entre los disponibles sin trámites, y también los de peor
+calidad de referencia, como se explica a continuación. Se añadió por último un conjunto de
+locución de medios en español peninsular \cite{kolobov2021mediaspeech}, que cubre el eje
+dialectal a registro controlado.
+
+Se descartó Common Voice \cite{ardila2020commonvoice} pese a su volumen: son frases leídas
+y aisladas, sin la continuidad discursiva que caracteriza a una explicación de aula, de modo
+que habría aportado horas sin aportar el fenómeno que se quería medir.
 
 \subsection{La calidad de la referencia como variable}
 
@@ -82,10 +203,16 @@ referencia varía sustancialmente entre corpus abiertos, y esa variación se con
 diferencias de rendimiento del modelo.
 
 En los recursos de habla espontánea empleados, las referencias omiten la acentuación de
-forma sistemática y contienen erratas. Medido sobre ellos, entre un tercio y un cuarenta
-por ciento de la tasa de error atribuida al modelo corresponde en realidad a defectos de la
-referencia. Se observaron casos en que el sistema escribía correctamente una palabra que la
-transcripción de referencia recogía mal, y era penalizado por ello.
+forma sistemática y contienen erratas. El efecto se cuantifica reevaluando el mismo
+resultado con un normalizador que ignora las tildes: la columna \emph{$\Delta$ tildes} de la
+tabla~\ref{tab:baseline-corpus} recoge esa diferencia. Sobre los corpus mexicanos alcanza
+3,48 y 5,11 puntos, es decir, entre un cuarto y un tercio de todo el error atribuido al
+modelo; sobre los peninsulares, con referencia verificada, cae a 0,07 puntos. La brecha no
+mide reconocimiento: mide la referencia.
+
+Se observaron además casos en que el sistema escribía correctamente una palabra que la
+transcripción de referencia recogía mal, y era penalizado por ello: \emph{mallorca} donde
+la referencia decía \emph{mayorca}, \emph{velázquez} donde decía \emph{velásquez}.
 
 La consecuencia práctica quedó incorporada al procedimiento: antes de adoptar un corpus se
 audita manualmente una muestra de sus referencias. Que un recurso disponga de transcripción
@@ -100,12 +227,21 @@ hipótesis normalizada por la longitud de la referencia, es la métrica estánda
 Su fortaleza es la comparabilidad; su debilidad, que asigna el mismo coste a todas las
 palabras y a todas las operaciones de edición.
 
-Esa limitación está documentada en la literatura reciente, que señala que la métrica opera
-en el plano léxico sin consideración del contexto semántico, y que trata de forma idéntica
-errores que destruyen la comprensión y errores irrelevantes para ella. Se han propuesto
-alternativas que ponderan las palabras según su contenido informativo, que penalizan de
-forma específica los errores sobre entidades nombradas, o que combinan la distancia de
-edición con señales de distancia semántica.
+Esa limitación está documentada en la literatura, que señala que la métrica opera en el
+plano léxico sin consideración del contexto semántico, y que trata de forma idéntica errores
+que destruyen la comprensión y errores irrelevantes para ella. Se han propuesto alternativas
+que combinan la distancia de edición con señales de distancia semántica entre referencia e
+hipótesis \cite{kim2021semdist}, y en el ámbito concreto del subtitulado accesible se ha
+mostrado experimentalmente, con usuarios sordos o con discapacidad auditiva, que dos
+transcripciones con el mismo WER pueden diferir mucho en cuánto se entiende de
+ellas \cite{kafle2017captions}.
+
+Conviene precisar también cómo se calcula aquí el intervalo de confianza de esa métrica. El
+remuestreo por bootstrap \cite{efron1993bootstrap} es el procedimiento habitual para ello en
+reconocimiento del habla, con una advertencia recogida en la literatura del campo desde hace
+dos décadas \cite{bisani2004bootstrap}: la unidad de remuestreo debe ser el fragmento
+y no la palabra, porque los errores se agrupan dentro de una misma locución y tratarlos como
+independientes estrecha el intervalo de forma artificial.
 
 Este trabajo llega a la misma conclusión por vía empírica y desde un dominio concreto: los
 errores que perjudican a un alumno con discapacidad auditiva no son los que más pesan en la
@@ -131,7 +267,10 @@ La literatura sobre adaptación de Whisper a escenarios de flujo continuo
 varios puntos que sirvieron de referencia para el diseño de la aplicación: emplear ventanas
 de entre cinco y diez segundos, solaparlas para no perder las palabras que caen en la
 frontera, y apoyarse en detección de actividad de voz para decidir cuándo dar por terminada
-una intervención.
+una intervención. Para esto último la práctica habitual recurre a detectores entrenados
+\cite{silero2021vad}; este trabajo emplea uno de energía, y la
+sección~\ref{sec:limitaciones} razona por qué esa elección no invalida el hallazgo que
+sostiene.
 
 Coinciden también en desaconsejar el condicionamiento sobre la transcripción previa entre
 ventanas, por el riesgo de propagación de errores. Este trabajo verificó esa recomendación

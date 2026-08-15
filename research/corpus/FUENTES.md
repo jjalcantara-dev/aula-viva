@@ -12,8 +12,8 @@ del WER a ~3% ronda **0.8 puntos**, así que el intervalo de confianza al 95% es
 ±1.5 puntos: con esa muestra `medium`, `large-v3-turbo` y `large-v3` son
 **estadísticamente indistinguibles**.
 
-Para detectar diferencias del orden de **0.5 puntos** —la escala en la que se moverán las
-técnicas de adaptación— hacen falta del orden de **30.000 palabras de referencia**, que a
+Para detectar diferencias del orden de **0.5 puntos**, la escala en la que se moverán las
+técnicas de adaptación, hacen falta del orden de **30.000 palabras de referencia**, que a
 ritmo de habla normal son **3-4 horas de audio transcrito**.
 
 > ⚠️ Es una cota **optimista**: supone errores independientes, cuando en realidad se
@@ -54,7 +54,7 @@ que lo separan del resto:
 
 - **`is_gold_transcript`** marca las transcripciones verificadas manualmente. Filtrando por
   ese campo se ataca directamente **R11**, que es el problema que arruina a CIEMPIESS
-- **`accent`** permite caracterizar —o filtrar— la variedad de cada hablante, y por tanto
+- **`accent`** permite caracterizar (o filtrar) la variedad de cada hablante, y por tanto
   documentar la composición dialectal del corpus en la memoria en vez de suponerla
 
 Registro: discurso parlamentario, formal pero pronunciado en vivo con desviaciones del
@@ -75,7 +75,7 @@ Politècnica de València (>10.000 minilecciones, 1.373 docentes), transcritas e
 del proyecto europeo transLectures y descritas como disponibles para la comunidad
 investigadora.
 
-- **Dominio:** exactamente el del TFM — clase universitaria grabada, en español
+- **Dominio:** exactamente el del TFM: clase universitaria grabada, en español
 - **Problema:** `mllp.upv.es` **rechazó la conexión** de forma repetida en M0 (posible
   bloqueo geográfico o caída). No se ha podido confirmar procedimiento ni licencia
 - **Verificado por otra vía (M0):** el GitHub público del grupo (`github.com/mllpresearch`)
@@ -225,6 +225,6 @@ Antes de adoptar cualquier candidato, y por **R11**:
 1. Escuchar y revisar a mano una muestra (≥20 clips) contra su transcripción
 2. Contar cuántas referencias tienen errores reales. Si es apreciable, descartar o corregir
 3. Comprobar si la referencia está normalizada (minúsculas, sin puntuación, numerales) y
-   registrarlo — condiciona el normalizador del protocolo (H2)
+   registrarlo: condiciona el normalizador del protocolo (H2)
 4. Anotar licencia y condiciones de redistribución **antes** de meter nada en el repositorio
 5. Registrar variedad dialectal, número de hablantes y condiciones acústicas

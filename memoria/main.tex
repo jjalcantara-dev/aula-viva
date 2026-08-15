@@ -6,6 +6,14 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{longtable}
+% Permite fijar una tabla donde se declara con [H]. Se usa solo en el apendice de
+% despliegue: alli las tablas son material de consulta que hay que leer junto al paso que
+% las cita, no ilustraciones que puedan flotar a otra pagina.
+\usepackage{float}
+% Diagramas de arquitectura. Se dibujan en TikZ y no se importan como imagen para que usen
+% la misma tipografia que el texto, escalen sin perdida y se versionen como codigo.
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, fit, backgrounds, calc, shapes.geometric}
 \numberwithin{equation}{chapter}
 \numberwithin{figure}{chapter}
 % La plantilla original deja las tablas con numeracion corrida; se unifica con figuras
@@ -17,10 +25,10 @@
 %---------------------------
 \title{Sistema de accesibilidad educativa en tiempo real con transcripción adaptativa: comparativa de técnicas sobre modelos ASR en español}
 \titulacion{Máster Universitario en Inteligencia Artificial}
-\author{[Nombre y apellidos]}
-\date{[d de mes de 2026]}
+\author{Jesús Jiménez Alcántara}
+\date{Marzo de 2027}
 \director{[Pendiente de asignación]}
-\nombreciudad{[Ciudad]}
+\nombreciudad{Vélez-Málaga}
 
 \begin{document}
 \renewcommand{\listfigurename}{Índice de Ilustraciones}
@@ -51,5 +59,7 @@
 
 \appendix
 \include{apendices/a-reproducibilidad}
+\include{apendices/b-riesgos}
+\include{apendices/c-despliegue}
 
 \end{document}

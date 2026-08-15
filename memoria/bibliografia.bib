@@ -1,9 +1,11 @@
 % Bibliografia del TFM.
 %
-% NOTA: cada entrada se ha verificado contra su fuente primaria (arXiv, ACL Anthology o
-% actas de congreso). Antes de la entrega conviene comprobar paginacion y editorial de las
-% que aparecen en actas, y anadir las referencias sobre accesibilidad educativa y
-% normativa de subtitulado, que no estan cubiertas aqui.
+% NOTA: todas las entradas se han verificado contra su fuente primaria (ACL Anthology,
+% ISCA Archive, PMLR, arXiv, BOE o el catalogo de UNE), incluidas autoria completa, orden
+% de autores, sede y paginacion. Ultima revision: agosto de 2026.
+%
+% ORGANIZACION: modelos y arquitecturas · adaptacion al dominio · corpus · evaluacion ·
+% subtitulado en vivo · accesibilidad y marco normativo · herramientas.
 
 @inproceedings{radford2023whisper,
   author    = {Radford, Alec and Kim, Jong Wook and Xu, Tao and Brockman, Greg and
@@ -46,11 +48,17 @@
   year    = {2022}
 }
 
-@article{machacek2023whisperstreaming,
-  author  = {Mach{\'a}{\v c}ek, Dominik and Dabre, Raj and Bojar, Ond{\v r}ej},
-  title   = {Turning Whisper into Real-Time Transcription System},
-  journal = {arXiv preprint arXiv:2307.14743},
-  year    = {2023}
+@inproceedings{machacek2023whisperstreaming,
+  author    = {Mach{\'a}{\v c}ek, Dominik and Dabre, Raj and Bojar, Ond{\v r}ej},
+  title     = {Turning Whisper into Real-Time Transcription System},
+  booktitle = {Proceedings of the 13th International Joint Conference on Natural Language
+               Processing and the 3rd Conference of the Asia-Pacific Chapter of the
+               Association for Computational Linguistics: System Demonstrations},
+  pages     = {17--24},
+  address   = {Bali, Indonesia},
+  year      = {2023},
+  publisher = {Association for Computational Linguistics},
+  note      = {Preprint disponible en arXiv:2307.14743}
 }
 
 @inproceedings{deltoro2014translectures,
@@ -62,8 +70,279 @@
                (IberSPEECH)},
   series    = {Lecture Notes in Computer Science},
   volume    = {8854},
+  pages     = {269--278},
+  address   = {Las Palmas de Gran Canaria},
   year      = {2014},
   publisher = {Springer},
   note      = {Describe el corpus poliMedia, con mas de 115 horas de clases en espanol
                transcritas manualmente}
+}
+
+% ------------------------------------------------ arquitecturas alternativas --
+% Necesarias porque el capitulo 5 contrasta Whisper con un transductor, y un lector
+% que solo conozca la familia codificador-decodificador no puede juzgar esa comparacion.
+
+@inproceedings{graves2012transducer,
+  author    = {Graves, Alex},
+  title     = {Sequence Transduction with Recurrent Neural Networks},
+  booktitle = {ICML Workshop on Representation Learning},
+  year      = {2012},
+  note      = {Preprint disponible en arXiv:1211.3711}
+}
+
+@inproceedings{xu2023tdt,
+  author    = {Xu, Hainan and Jia, Fei and Majumdar, Somshubra and Huang, He and
+               Watanabe, Shinji and Ginsburg, Boris},
+  title     = {Efficient Sequence Transduction by Jointly Predicting Tokens and Durations},
+  booktitle = {Proceedings of the 40th International Conference on Machine Learning},
+  series    = {Proceedings of Machine Learning Research},
+  volume    = {202},
+  year      = {2023},
+  note      = {Define la variante TDT del transductor empleada por el modelo contrastado
+               en exp-004. Preprint en arXiv:2304.06795}
+}
+
+@inproceedings{gulati2020conformer,
+  author    = {Gulati, Anmol and Qin, James and Chiu, Chung-Cheng and Parmar, Niki and
+               Zhang, Yu and Yu, Jiahui and Han, Wei and Wang, Shibo and Zhang, Zhengdong
+               and Wu, Yonghui and Pang, Ruoming},
+  title     = {{Conformer}: Convolution-augmented Transformer for Speech Recognition},
+  booktitle = {Proceedings of Interspeech},
+  pages     = {5036--5040},
+  year      = {2020}
+}
+
+@inproceedings{rekesh2023fastconformer,
+  author    = {Rekesh, Dima and Koluguri, Nithin Rao and Kriman, Samuel and
+               Majumdar, Somshubra and Noroozi, Vahid and Huang, He and
+               Hrinchuk, Oleksii and Puvvada, Krishna and Kumar, Ankur and
+               Balam, Jagadeesh and Ginsburg, Boris},
+  title     = {Fast {Conformer} with Linearly Scalable Attention for Efficient Speech
+               Recognition},
+  booktitle = {IEEE Automatic Speech Recognition and Understanding Workshop (ASRU)},
+  year      = {2023},
+  note      = {Preprint disponible en arXiv:2305.05084}
+}
+
+% ------------------------------------------------------------------ corpus --
+
+@inproceedings{ardila2020commonvoice,
+  author    = {Ardila, Rosana and Branson, Megan and Davis, Kelly and Kohler, Michael and
+               Meyer, Josh and Henretty, Michael and Morais, Reuben and Saunders, Lindsay and
+               Tyers, Francis M. and Weber, Gregor},
+  title     = {{Common Voice}: A Massively-Multilingual Speech Corpus},
+  booktitle = {Proceedings of the 12th Language Resources and Evaluation Conference (LREC)},
+  pages     = {4218--4222},
+  address   = {Marsella, Francia},
+  year      = {2020}
+}
+
+@inproceedings{hernandezmena2014ciempiess,
+  author    = {Hern{\'a}ndez Mena, Carlos Daniel and Herrera Camacho, Abel},
+  title     = {{CIEMPIESS}: A New Open-Sourced {M}exican {S}panish Radio Corpus},
+  booktitle = {Proceedings of the 9th International Conference on Language Resources and
+               Evaluation (LREC)},
+  pages     = {371--375},
+  address   = {Reikiavik, Islandia},
+  year      = {2014},
+  note      = {Sus referencias omiten sistematicamente la acentuacion; ver R11}
+}
+
+@article{kolobov2021mediaspeech,
+  author  = {Kolobov, Rostislav and Okhapkina, Olga and Omelchishina, Olga and
+             Platunov, Andrey and Bedyakin, Roman and Moshkin, Vyacheslav and
+             Menshikov, Dmitry and Mikhaylovskiy, Nikolay},
+  title   = {{MediaSpeech}: Multilanguage {ASR} Benchmark and Dataset},
+  journal = {arXiv preprint arXiv:2103.16193},
+  year    = {2021}
+}
+
+% -------------------------------------------------------------- evaluacion --
+
+@book{efron1993bootstrap,
+  author    = {Efron, Bradley and Tibshirani, Robert J.},
+  title     = {An Introduction to the Bootstrap},
+  publisher = {Chapman \& Hall},
+  address   = {New York},
+  year      = {1993}
+}
+
+@inproceedings{bisani2004bootstrap,
+  author    = {Bisani, Maximilian and Ney, Hermann},
+  title     = {Bootstrap Estimates for Confidence Intervals in {ASR} Performance Evaluation},
+  booktitle = {IEEE International Conference on Acoustics, Speech, and Signal Processing
+               (ICASSP)},
+  volume    = {1},
+  pages     = {409--412},
+  year      = {2004},
+  note      = {Fundamenta el remuestreo por fragmentos y no por palabras}
+}
+
+@inproceedings{kim2021semdist,
+  author    = {Kim, Suyoun and Arora, Abhinav and Le, Duc and Yeh, Ching-Feng and
+               Fuegen, Christian and Kalinli, Ozlem and Seltzer, Michael L.},
+  title     = {Semantic Distance: A New Metric for {ASR} Performance Analysis Towards
+               Spoken Language Understanding},
+  booktitle = {Proceedings of Interspeech},
+  pages     = {1977--1981},
+  year      = {2021},
+  note      = {Preprint disponible en arXiv:2104.02138}
+}
+
+% ------------------------------- accesibilidad, usuarios y marco normativo --
+
+@inproceedings{kafle2017captions,
+  author    = {Kafle, Sushant and Huenerfauth, Matt},
+  title     = {Evaluating the Usability of Automatically Generated Captions for People who
+               are Deaf or Hard of Hearing},
+  booktitle = {Proceedings of the 19th International ACM SIGACCESS Conference on Computers
+               and Accessibility (ASSETS)},
+  pages     = {165--174},
+  address   = {Baltimore, MD},
+  publisher = {ACM},
+  year      = {2017},
+  note      = {Evidencia experimental de que el WER predice mal la utilidad percibida de
+               un subtitulo automatico}
+}
+
+@article{gernsbacher2015captions,
+  author  = {Gernsbacher, Morton Ann},
+  title   = {Video Captions Benefit Everyone},
+  journal = {Policy Insights from the Behavioral and Brain Sciences},
+  volume  = {2},
+  number  = {1},
+  pages   = {195--202},
+  year    = {2015},
+  note    = {Revision de mas de cien estudios empiricos: el subtitulado en la misma lengua
+             mejora comprension, atencion y memoria, y beneficia especialmente a quien ve
+             el material en una lengua que no es la suya}
+}
+
+@article{monteroperez2013meta,
+  author  = {Montero Perez, Maribel and Van Den Noortgate, Wim and Desmet, Piet},
+  title   = {Captioned Video for {L2} Listening and Vocabulary Learning: A Meta-Analysis},
+  journal = {System},
+  volume  = {41},
+  number  = {3},
+  pages   = {720--739},
+  year    = {2013},
+  note    = {Metaanalisis de 18 estudios; efecto grande sobre comprension oral y sobre
+             adquisicion de vocabulario ($g = 0{,}87$)}
+}
+
+@article{vanderplank1988teletext,
+  author  = {Vanderplank, Robert},
+  title   = {The Value of Teletext Sub-titles in Language Learning},
+  journal = {ELT Journal},
+  volume  = {42},
+  number  = {4},
+  pages   = {272--281},
+  year    = {1988},
+  note    = {Trabajo fundacional sobre subtitulado en la misma lengua como apoyo al
+             aprendizaje de idiomas}
+}
+
+@article{wang2023transcripts,
+  author  = {Wang, Qiao and Chen, Yue},
+  title   = {The Role of Live Transcripts in Synchronous Online {L2} Classrooms: Learning
+             Outcomes and Learner Perceptions},
+  journal = {Education and Information Technologies},
+  year    = {2023},
+  note    = {El unico estudio localizado sobre transcripcion EN VIVO y no sobre video
+             grabado: no mejora las calificaciones, pero el alumnado de menor competencia
+             completa un 24,6\% mas de actividades de clase. DOI 10.1007/s10639-023-11784-8}
+}
+
+@techreport{linder2016captions,
+  author      = {Linder, Katie},
+  title       = {Student Uses and Perceptions of Closed Captions and Transcripts: Results
+                 from a National Study},
+  institution = {Oregon State University Ecampus Research Unit},
+  address     = {Corvallis, OR},
+  year        = {2016},
+  note        = {Encuesta a 2.124 estudiantes de 15 universidades; el 98,6\% considera
+                 utiles los subtitulos y el 75\% los usa como apoyo al aprendizaje}
+}
+
+@misc{mefpd2024datos,
+  author       = {{Ministerio de Educaci{\'o}n, Formaci{\'o}n Profesional y Deportes}},
+  title        = {Estad{\'i}stica de las Ense{\~n}anzas no universitarias. Datos avance
+                  del curso 2023-2024},
+  year         = {2024},
+  howpublished = {Subdirecci{\'o}n General de Estad{\'i}stica y Estudios, Gobierno de
+                  Espa{\~n}a},
+  note         = {1.066.875 alumnos de nacionalidad extranjera, el 12,2\% del total en
+                  ensenanzas de Regimen General no universitarias}
+}
+
+@misc{onu2006cdpd,
+  author       = {{Organizaci{\'o}n de las Naciones Unidas}},
+  title        = {Convenci{\'o}n sobre los Derechos de las Personas con Discapacidad},
+  year         = {2006},
+  howpublished = {Resoluci{\'o}n A/RES/61/106. Art{\'i}culo 24, educaci{\'o}n},
+  note         = {Ratificada por Espana en 2008}
+}
+
+@misc{espana2013tr,
+  author       = {{Jefatura del Estado}},
+  title        = {Real Decreto Legislativo 1/2013, de 29 de noviembre, por el que se aprueba
+                  el Texto Refundido de la Ley General de derechos de las personas con
+                  discapacidad y de su inclusi{\'o}n social},
+  year         = {2013},
+  howpublished = {Bolet{\'i}n Oficial del Estado, n{\'u}m. 289, de 3 de diciembre de 2013}
+}
+
+@misc{aenor2012une153010,
+  author       = {{AENOR}},
+  title        = {{UNE 153010:2012}. Subtitulado para personas sordas y personas con
+                  discapacidad auditiva},
+  year         = {2012},
+  howpublished = {Asociaci{\'o}n Espa{\~n}ola de Normalizaci{\'o}n y Certificaci{\'o}n},
+  note         = {Fija criterios de velocidad de lectura, segmentacion y presentacion}
+}
+
+@misc{ue2016rgpd,
+  author       = {{Parlamento Europeo y Consejo de la Uni{\'o}n Europea}},
+  title        = {Reglamento (UE) 2016/679, General de Protecci{\'o}n de Datos},
+  year         = {2016},
+  howpublished = {Diario Oficial de la Uni{\'o}n Europea, L 119}
+}
+
+% ------------------------------------------------------------ herramientas --
+
+@inproceedings{wolf2020transformers,
+  author    = {Wolf, Thomas and Debut, Lysandre and Sanh, Victor and Chaumond, Julien and
+               Delangue, Clement and Moi, Anthony and Cistac, Pierric and Rault, Tim and
+               Louf, R{\'e}mi and Funtowicz, Morgan and Brew, Jamie},
+  title     = {Transformers: State-of-the-Art Natural Language Processing},
+  booktitle = {Proceedings of the 2020 Conference on Empirical Methods in Natural Language
+               Processing: System Demonstrations},
+  year      = {2020},
+  publisher = {Association for Computational Linguistics}
+}
+
+@misc{microsoft2024cudawsl,
+  author       = {{Microsoft}},
+  title        = {Enable {NVIDIA CUDA} on {WSL} 2},
+  year         = {2024},
+  howpublished = {\url{https://learn.microsoft.com/windows/ai/directml/gpu-cuda-in-wsl}},
+  note         = {La tarjeta se expone dentro del subsistema a traves de
+                  \texttt{/dev/dxg}, no de los dispositivos de un Linux nativo}
+}
+
+@misc{amd2025rocmwsl,
+  author       = {{AMD}},
+  title        = {Use {ROCm} on {Radeon} and {Ryzen}: {WSL} How-to Guide},
+  year         = {2025},
+  howpublished = {\url{https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/wsl/howto_wsl.html}},
+  note         = {Soporte de produccion sobre el subsistema de Windows via ROCDXG, tambien
+                  a traves de \texttt{/dev/dxg}}
+}
+
+@misc{silero2021vad,
+  author       = {{Silero Team}},
+  title        = {{Silero VAD}: pre-trained enterprise-grade Voice Activity Detector},
+  year         = {2021},
+  howpublished = {\url{https://github.com/snakers4/silero-vad}},
+  note         = {Alternativa entrenada al detector de energia empleado en este trabajo}
 }

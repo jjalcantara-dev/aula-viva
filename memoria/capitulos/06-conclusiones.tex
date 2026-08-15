@@ -27,8 +27,11 @@ Descontado ese efecto, la ganancia sigue existiendo pero es modesta.
 
 El resultado más relevante del trabajo no procede de la comparativa de técnicas sino de su
 comparación con las decisiones de ingeniería del sistema. Segmentar el audio por silencios
-en lugar de por reloj reduce el error 7,4 puntos a igual latencia media; seis veces más que
-la mejor de las técnicas de adaptación, y a coste de cómputo prácticamente nulo.
+en lugar de por reloj reduce el error 7,4 puntos a igual latencia media, con intervalo de
+confianza $[-9{,}76, -5{,}04]$ y el test de signos de acuerdo; seis veces más que la mejor de
+las técnicas de adaptación, y a coste de cómputo prácticamente nulo. La comparación entre
+ambas magnitudes es legítima porque las dos se han medido con el mismo instrumento y bajo el
+mismo criterio, no solo como diferencia de medias.
 
 Esto invierte la premisa de la que partía el trabajo. Se asumía que el margen estaba en
 adaptar el modelo al dominio educativo; los datos indican que, con los modelos actuales, el
@@ -38,7 +41,7 @@ mal desperdicia más calidad de la que cualquier técnica de adaptación puede r
 \subsection{Sobre la evaluación}
 
 La tasa de error de palabra es insuficiente para valorar un sistema de accesibilidad, y el
-trabajo aporta cuatro evidencias independientes de ello. La más contundente: con un 18,61\%
+trabajo aporta cinco evidencias independientes de ello. La más contundente: con un 18,61\%
 de error, cifra que suena aceptable, el sistema pierde o altera el 28\% de las negaciones e
 introduce trece que nadie pronunció. Un alumno con discapacidad auditiva lee entonces lo
 contrario de lo explicado, sin ninguna señal de que algo falla.
@@ -48,9 +51,43 @@ cobertura y precisión sobre la terminología del dominio, y otra que contabiliz
 sobre negaciones, numerales y cuantificadores. Ambas detectan efectos que el WER agregado
 no muestra, y en un caso concreto invierten la valoración de una técnica.
 
+\subsection{Sobre la elección del modelo base}
+
+La comparativa de técnicas se construyó sobre un único modelo, elegido entre variantes de
+su misma familia; eso responde cuál de ellas, no por qué esa familia. Contrastarlo con una
+arquitectura distinta, un transductor multilingüe reciente, produjo tres resultados que
+conviene leer juntos (tabla~\ref{tab:comparativa-arquitecturas}).
+
+El primero es que la ventaja en tasa de error existe pero no es general: 2,31 puntos sobre
+habla parlamentaria leída y ninguna diferencia detectable sobre habla espontánea. El
+segundo refuerza la conclusión anterior sobre la evaluación: con tasas de error
+indistinguibles entre sí, un modelo pierde el 35\% de las negaciones y el otro el 12\%,
+medido sobre la submuestra de cuatrocientos fragmentos del contraste y no sobre el corpus
+completo del que sale la cifra del apartado anterior. La insuficiencia del WER deja así de
+ser atribuible a una peculiaridad de un modelo concreto y se muestra como una propiedad de
+la métrica.
+
+El tercero decide. El modelo alternativo no falla truncando sino traduciendo: ante habla
+espontánea española produjo frases completas en inglés, y alternancias de idioma dentro de
+una misma oración. Trece casos sobre ochocientos clips, frente a ninguno del modelo
+empleado. Es el mismo criterio que ya había descartado a la variante más rápida de la
+familia original, aplicado ahora contra el candidato que ganaba en las métricas: en
+accesibilidad el modo de fallo pesa más que unas décimas de error, porque una transcripción
+ausente se advierte y una traducida al inglés se lee como si el docente hubiera cambiado de
+idioma.
+
+Pesa además que el fallo no admite corrección por configuración: esa arquitectura no expone
+ningún mecanismo para imponer el idioma de salida, mientras que al modelo empleado sí se le
+fija y no fugó ni una vez en los mismos clips. La capacidad de forzar el idioma pasa así de
+comodidad a requisito para este tipo de sistema.
+
+Detectarlo exigió un instrumento nuevo, y ese es un resultado en sí mismo: el detector de
+salidas anómalas del que se disponía las identifica por su longitud, y una frase traducida
+tiene longitud normal. El punto ciego llevaba ahí desde el principio.
+
 \subsection{Sobre la validez de las mediciones}
 
-Cinco incidentes documentados en la sección~\ref{sec:incidentes} comparten una
+Ocho incidentes documentados en la sección~\ref{sec:incidentes} comparten una
 característica: en todos ellos el sistema seguía funcionando y produciendo cifras
 verosímiles. Ninguno se manifestó como un error.
 
@@ -61,15 +98,102 @@ muestra de las referencias antes de adoptar un corpus; incorporar la configuraci
 decodificación a la identidad del resultado; y registrar el contenido exacto del corpus
 empleado, no solo su nombre.
 
+Hay además una conclusión más general, y es la que este trabajo defendería ante la pregunta
+de qué aporta metodológicamente. Todos los incidentes son la misma clase de fallo: un eje de
+variación que existía en el experimento pero no en la \emph{identidad} del resultado. La
+decodificación, el contenido del corpus, el solapamiento entre ventanas y el tamaño de la
+muestra entraron en esa identidad uno a uno, y siempre después de que su ausencia produjera
+una cifra falsa. La regla que se deriva es esta: cualquier eje que se introduzca debe
+incorporarse al nombre del resultado, no solo a su contenido. Es barata de aplicar y cara de
+descubrir, porque su incumplimiento nunca se manifiesta como un fallo sino como una tabla.
+
+\section{Verificación de los objetivos}
+
+Los criterios de cumplimiento se fijaron en el capítulo~\ref{cap:objetivos} antes de ejecutar
+los experimentos, precisamente para no poder ajustarlos después a los resultados. La
+tabla~\ref{tab:verificacion} los contrasta con lo obtenido; la trazabilidad de los requisitos
+de los que se derivan está en la sección~\ref{sec:trazabilidad-requisitos}. Se marca como parcial lo que se
+cumplió con una salvedad, en lugar de redondear al alza.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|c|c|p{9.2cm}|}
+\hline
+\textbf{Obj.} & \textbf{Estado} & \textbf{Evidencia} \\
+\hline
+1 & Parcial & Toda cifra se regenera con un comando y todo resultado registra su
+    configuración. La procedencia completa (commit, estado del árbol y resumen
+    criptográfico del corpus) cubre los once resultados posteriores al mecanismo, no los
+    cuarenta y uno anteriores; para estos, la comprobación equivalente está automatizada.
+    Desglose en el apéndice~\ref{ap:reproducibilidad}. \\
+\hline
+2 & Cumplido & Las tres técnicas se miden sobre el mismo corpus, con la misma decodificación
+    y el doble criterio de significación (tabla~\ref{tab:comparativa-tecnicas}). \\
+\hline
+3 & Cumplido & El tamaño de muestra se justifica con un cálculo previo; tres de las ocho
+    mediciones quedan marcadas sin potencia en la propia tabla y no se interpretan. \\
+\hline
+4 & Cumplido & Tres métricas complementarias, con evidencia de que los fallos que detectan
+    existen en el material analizado. \\
+\hline
+5 & Cumplido & Un cliente de la red visualiza los subtítulos sin ejecutar cálculo ni
+    conceder permisos; el reconocimiento ocurre una vez para toda el aula. \\
+\hline
+6 & Cumplido & La segmentación se elige con barrido propio (exp-100 y exp-102), no por
+    convención; el punto de operación se justifica con la curva completa. \\
+\hline
+7 & Cumplido & La curva de degradación permite expresar RNF6 en decibelios en lugar de como
+    recomendación genérica. \\
+\hline
+8 & Cumplido & El adaptador entra en el sistema desplegado como argumento de arranque del
+    servicio, sin modificar la aplicación (sección~\ref{sec:integracion}). \\
+\hline
+RNF1 & Parcial & Los dos primeros sumandos de la latencia están medidos; el circuito de red
+    y renderizado está instrumentado pero sin campaña sistemática de medida. \\
+\hline
+\end{tabular}
+\caption{Verificación de los objetivos frente a los criterios fijados de antemano.}
+\label{tab:verificacion}
+\end{table}
+
+Siete de los ocho objetivos específicos se consideran alcanzados sin salvedades. El primero
+queda como parcial, y conviene explicar por qué se marca así en lugar de darlo por bueno:
+el criterio exigía que \emph{cualquier} cifra publicada registrase el commit y el contenido
+exacto del corpus, y eso es cierto del procedimiento tal como está hoy pero no de todo el
+archivo, porque el mecanismo se construyó a mitad del trabajo y como respuesta a un fallo.
+Redondearlo al alza habría sido especialmente incongruente en un trabajo cuya aportación
+metodológica consiste en desconfiar de las afirmaciones que un sistema hace sobre sí mismo.
+La otra casilla parcial no corresponde a un objetivo sino a un requisito no funcional, y se
+declara aquí en lugar de omitirse porque afecta a una cifra que el trabajo reporta.
+
+Conviene además señalar lo que el cumplimiento \emph{no} significa. El segundo objetivo se
+alcanzó y su resultado es mayoritariamente negativo: dos de las tres técnicas no mejoran, y
+una empeora. Eso era una posibilidad prevista desde la planificación, y el criterio de
+cumplimiento se redactó para que un resultado negativo bien medido contara como objetivo
+alcanzado. Lo contrario habría creado un incentivo para forzar la interpretación de los
+datos.
+
 \section{Limitaciones}
 \label{sec:limitaciones}
 
 \textbf{Ninguno de los corpus es una clase real.} Es la limitación de fondo. Los materiales
 empleados se aproximan al registro de una clase magistral, pero ninguno lo es. Las
 conclusiones sobre adaptación al dominio educativo son, en rigor, conclusiones sobre
+% AL ENVIAR LA SOLICITUD: sustituir la ultima frase por «que quedo cursada sin resolucion
+% dentro del plazo de este trabajo». Ver docs/solicitud-polimedia.md.
 adaptación a los dominios sustitutos disponibles. El corpus objetivo, un repositorio
-universitario con transcripciones manuales, requiere una solicitud institucional que quedó
-cursada sin resolución dentro del plazo de este trabajo.
+universitario con transcripciones manuales, no está publicado y requiere una solicitud
+institucional que queda redactada y dirigida, pero cuya tramitación excede el plazo de este
+trabajo.
+
+\textbf{La comparación entre arquitecturas no tiene la decodificación igualada.} No es un
+descuido subsanable: un transductor emite un símbolo por trama y carece del bucle
+autorregresivo sobre el texto en el que el modelo empleado aplica su reintento por
+temperatura, de modo que no existe una configuración común sobre la que igualarlos. Cada
+sistema se evaluó en su configuración estándar y la comparación es, en rigor, entre
+sistemas completos y no entre arquitecturas con el resto controlado.
 
 \textbf{Los resultados miden implementaciones, no técnicas.} Se hizo evidente con la
 post-corrección: una primera versión de las instrucciones dejaba la técnica inerte, y otra
@@ -86,7 +210,29 @@ independiente y posiblemente más dañino que el ruido aditivo en un aula real.
 
 \textbf{La aplicación no se ha evaluado con usuarios.} Se ha verificado su funcionamiento
 técnico y se ha medido su latencia, pero no se ha comprobado si el resultado es útil para
-quien debe leerlo.
+quien debe leerlo. Es la limitación más incómoda del trabajo, porque la literatura sobre
+subtitulado accesible \cite{kafle2017captions} indica precisamente que las métricas
+automáticas predicen mal esa utilidad, y este trabajo lo sostiene con datos propios sin
+llegar a cerrar el círculo. Vale tanto para el colectivo que motiva el trabajo como para el
+alumnado que está aprendiendo la lengua, cuya inclusión en la
+sección~\ref{sec:para-quien} se apoya en literatura ajena y no en medición propia.
+
+\textbf{La latencia del circuito completo no tiene campaña de medida.} Los dos sumandos
+dominantes están caracterizados experimentalmente, y la aplicación instrumenta el tercero y
+lo muestra en cada sesión, pero no se ha recogido una distribución de medidas en condiciones
+de aula. La cifra que el trabajo defiende como latencia del sistema es, por tanto, la suma de
+dos términos medidos y uno observado.
+
+\textbf{El filtro de alucinaciones es heurístico por construcción.} Cubre los dos patrones
+reconocibles por su forma y no puede cubrir el tercero, la alucinación plausible en el
+dominio, cuya existencia está confirmada en uso real (sección~\ref{sec:filtro}). Detectarla
+exigiría contrastar la hipótesis con el audio, que es un problema distinto.
+
+\textbf{Las mediciones del núcleo aplicado se apoyan en un solo corpus y un solo modelo.}
+Los barridos de ventana, segmentación y ruido se ejecutaron sobre cuarenta fragmentos de
+habla parlamentaria peninsular. La magnitud de la ventaja de segmentar por pausas es lo
+bastante grande como para que su signo no dependa de esa elección, pero la cifra concreta de
+7,4 puntos sí es propia de ese material.
 
 \textbf{El sistema depende de un único servidor.} La difusión se resuelve en memoria, lo
 que ata el despliegue a un proceso. Escalar a varios exigiría una infraestructura
@@ -111,7 +257,27 @@ reevaluar el prompting en condiciones justas.
 unidades léxicas concretas. El paso siguiente sería medir si el alumno entiende lo mismo
 leyendo la transcripción que escuchando la clase, lo que exige evaluación con personas.
 
-\textbf{Implementaciones optimizadas para inferencia.} Existen variantes del modelo
-significativamente más rápidas que la empleada, cuyo soporte para la plataforma de cálculo
-utilizada en este trabajo era limitado. Su viabilidad debería reevaluarse, porque el margen
-de latencia condiciona directamente la usabilidad en aula.
+\textbf{Evaluación con alumnado que está aprendiendo la lengua.} Es la continuación con
+mejor relación entre coste y aportación, por tres motivos. La población es grande: más de un
+millón de alumnos de nacionalidad extranjera en el sistema educativo español no
+universitario. La evidencia de que el subtitulado le beneficia está establecida sobre vídeo
+grabado \cite{monteroperez2013meta, gernsbacher2015captions} pero apenas explorada en
+directo; y el único estudio localizado en ese escenario \cite{wang2023transcripts} deja
+abierta justo la pregunta que este sistema permitiría atacar, porque midió participación y
+calificaciones pero no calidad de la transcripción. Un sistema que además \emph{mide} qué
+negaciones y qué terminología sobreviven permitiría relacionar por primera vez ambas cosas:
+cuánta degradación tolera quien está aprendiendo la lengua antes de descolgarse de la clase.
+Es la hipótesis que la sección~\ref{sec:para-quien} deja planteada y que este trabajo no
+puede responder.
+
+\textbf{Adaptación al español de una arquitectura de transductor.} El contraste con un
+transductor multilingüe dejó una vía abierta: el candidato conservaba mucho mejor el
+contenido crítico y corría entre cinco y nueve veces más rápido, y quedó descartado por un
+motivo concreto y potencialmente reparable, la deriva al inglés. Un ajuste fino sobre
+español, o una variante que permita imponer el idioma, cambiarían el balance por completo.
+Es la continuación con mejor relación entre esfuerzo y recorrido, porque parte de un
+sistema que ya gana en las métricas que importan.
+
+\textbf{Repetir la comparación de arquitecturas sobre el corpus objetivo.} La diferencia
+entre habla leída y espontánea fue lo bastante grande como para desaconsejar extrapolar: lo
+medido sobre corpus sustitutos no permite anticipar qué ocurriría sobre clases reales.

@@ -26,6 +26,18 @@ idioma del autor.
 - En fuentes Python los comentarios van **sin tildes** (evita problemas de codificación en
   entornos mixtos); en C# y en Markdown sí se acentúa.
 
+### Puntuación: nunca guiones largos en mitad de un párrafo
+
+**No se usa el guión largo (`—`) como inciso dentro de la prosa.** Vale para la memoria, los
+README, los comentarios de código y los mensajes de commit. En su lugar:
+
+- **Dos puntos** cuando lo que sigue explica o desarrolla lo anterior.
+- **Punto y coma** cuando son dos ideas completas relacionadas.
+- **Comas** cuando el inciso es breve y encaja sin romper la frase.
+- **Paréntesis** solo si el contenido es verdaderamente accesorio.
+
+Antes de dar por buena la redacción, comprobar que no quedan: `grep -rn "—" memoria/`.
+
 ## Comandos
 
 `make` sin argumentos lista todos los atajos. Los habituales:
@@ -40,7 +52,7 @@ make parar         # mata servicios y experimentos sueltos
 make tablas        # regenera TODAS las tablas y figuras de la memoria
 ```
 
-Experimentos: `make baseline`, `make exp-001` … `make exp-104` (nueve experimentos). `make` los lista todos con
+Experimentos: `make baseline`, `make exp-001` … `make exp-104` (diez experimentos). `make` los lista todos con
 la pregunta que responde cada uno.
 Aceptan variables: `make baseline MODELO=openai/whisper-small CORPUS=tedx_es`.
 
@@ -158,23 +170,59 @@ casi todos los segmentos se cerraban por agotar el tope en vez de por pausa. Va
 desactivado, y la interfaz muestra el recuento de cortes por pausa frente a por tope para
 que el fallo sea visible.
 
+**El enlace de configuración de .NET falla en silencio.** Es por nombre de propiedad: si la
+clave del `appsettings.json` no coincide, la sección se ignora, el objeto se queda con sus
+valores por defecto y **no hay excepción ni aviso**. Pasó con dos secciones a la vez, por un
+renombrado de identificadores a inglés que no llegó al fichero: `Glosario:Terminos` frente a
+`Glossary:Terms` dejó el glosario vacío en todos los despliegues, y `Asr:Segmentacion`
+frente a `Segmentation` hacía que ajustar el umbral de silencio no tuviera ningún efecto.
+Que los valores por defecto de C# coincidieran con los del fichero lo enmascaró del todo.
+`ConfiguracionTests` lo cubre ahora: **toda sección nueva del appsettings necesita su prueba
+de enlace**, porque leer el JSON no basta, era JSON válido.
+
+**Un contador declarado no es un contador que cuente.** `CutsBySilence`, `CutsByTimeout` y
+`DiscardedAsSilence` estaban declarados, documentados y expuestos en la interfaz sin que
+nada los incrementara: el diagnóstico de segmentación que debe delatar el sabotaje del AGC
+mostraba 0/0 indefinidamente. Y `ProporcionVozMinima` estaba escrita, justificada y sin
+usar, de modo que la primera barrera anti-alucinación no existía. La comprobación barata es
+`grep` de cada símbolo declarado: si solo aparece en su declaración, no hace nada.
+
 **Los decoradores rompen las comprobaciones de tipo.** `HighlightingAsrEngine` envuelve al
 motor real, así que un `is WhisperAsrEngine` desde `IAsrEngine` **nunca se cumple**. El
 diagnóstico de segmentación estuvo devolviendo ceros por esto. Cualquier capacidad
 opcional va en su propia interfaz (`ISegmentationDiagnostics`) que los decoradores
 reenvían.
 
-**El WER agregado esconde lo que importa en accesibilidad.** Cuatro casos medidos lo
+**El WER agregado esconde lo que importa en accesibilidad.** Cinco casos medidos lo
 confirman: tildes ausentes en las referencias, alucinaciones fluidas, terminología del
-dominio, y duplicación por solapamiento. Por eso existen métricas aparte
+dominio, duplicación por solapamiento, y dos modelos con WER indistinguible donde uno
+pierde el 35% de las negaciones y el otro el 12% (exp-004). Por eso existen métricas aparte
 (`eval/metrics/terminologia.py`, `eval/report/anomalias.py`). Al evaluar una técnica,
 reportar también estas, no solo WER.
 
+**Las anomalías se miden por longitud, así que la traducción es invisible.**
+`anomalias.py` detecta truncamiento y expansión comparando el número de palabras; una
+frase traducida al inglés tiene longitud normal y pasa de largo. El punto ciego apareció al
+evaluar un modelo multilingüe sin control de idioma, que devolvió «Hello, what are you
+talking about?» ante habla española. Para eso existe `eval/report/fuga_idioma.py`, que va
+aparte porque detecta otra cosa.
+
+**Al comparar arquitecturas, comprobar el estilo numérico antes de creerse la diferencia.**
+El normalizador congelado no equipara «2010» con «dos mil diez», y como son una ficha
+frente a tres, el alineamiento cuenta **tres errores por una cifra bien reconocida**. Entre
+variantes del mismo modelo da igual porque comparten convención; entre arquitecturas
+distintas infló un 18% la diferencia medida. Se comprueba con `eval/report/estilo_numerico.py`,
+que repite el contraste sobre los clips sin numerales. **No tocar el normalizador**: está
+congelado y cambiarlo invalida todo lo anterior.
+
 ## Contexto de decisiones
 
-- `PLANNING.md` — planificación por fases y **15 riesgos** con mitigación. R11 (calidad de
-  la referencia), R13 (variedad dialectal), R14 (decodificación) y R15 (sin director) se
-  detectaron midiendo, no planificando.
+- `PLANNING.md` — planificación por fases y **16 riesgos** con mitigación. R11 (calidad de
+  la referencia), R13 (variedad dialectal), R14 (decodificación), R15 (sin director) y R16
+  (el modelo base envejece) se detectaron midiendo, no planificando.
+- `research/MODELOS.md` — catálogo de modelos auditados, hermano de `corpus/FUENTES.md`.
+  Todo candidato debe **poder recibir «transcribe en español» y obedecer**: exp-004 midió
+  que un transductor multilingüe sin control de idioma traduce al inglés ante habla difícil.
 - `docs/decisiones/` — una decisión por fichero, con la evidencia que la respalda.
 - `docs/preguntas-director.md` — cola viva de decisiones bloqueadas. **No hay director
   asignado**; la norma es tomar decisiones provisionales documentadas y marcarlas
@@ -184,9 +232,23 @@ reportar también estas, no solo WER.
 
 ## Entorno
 
-GPU AMD RX 9070 XT (gfx1201) con ROCm; funciona y entrena. La CPU se calienta más que la
-GPU durante los barridos: es normal y está medido — el trabajo de CPU es el **despacho**
-de kernels desde Python, no el cálculo. Mover el mel a GPU o limitar hilos **no ayuda**
+GPU AMD RX 9070 XT (gfx1201) con ROCm; funciona y entrena.
+
+**Un núcleo entero se pierde en espera activa, siempre.** Medido: `torch.zeros(1,
+device="cuda")` basta para que un hilo del runtime gire al 100% de un núcleo de forma
+permanente, esté o no haciendo algo el proceso. Importar torch cuesta 0%; el salto está en
+la creación del contexto de GPU, no en el modelo ni en el servidor. No lo desactivan
+`HSA_ENABLE_INTERRUPT`, `GPU_MAX_HW_QUEUES`, `AMD_DIRECT_DISPATCH` ni `HSA_ENABLE_SDMA`
+(los cuatro probados). Consecuencias prácticas:
+
+- Al mirar `top`, **un núcleo al 100% en el servicio ASR en reposo es lo esperado**, no un
+  fallo que investigar. Ya costó tiempo una vez.
+- Hay que descontarlo antes de atribuir carga de CPU al trabajo real.
+- No invalida ninguna medición: es un coste constante, idéntico en todas las condiciones.
+
+Aparte de eso, la CPU se calienta más que la GPU durante los barridos: es normal y está
+medido: el trabajo de CPU es el **despacho** de kernels desde Python, no el cálculo.
+Mover el mel a GPU o limitar hilos **no ayuda**
 (comprobado en `tools/bench_termico.py`); lo que ayuda es el procesamiento por lotes.
 
 `app/` requiere el runtime de ASP.NET Core, que en Arch/CachyOS no viene con el SDK:

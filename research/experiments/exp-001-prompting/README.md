@@ -57,8 +57,8 @@ El desglose de errores explica el mecanismo, y es el hallazgo de verdad:
 > *qué* palabra es, y falla más veces *si* la palabra estaba.
 
 La métrica de terminología lo confirma desde el otro lado: la **cobertura sube 1.42
-puntos** —el prompt sí recupera términos que antes se perdían— pero la **precisión baja
-1.04** —empieza a colar términos del glosario donde no los hay—. Es exactamente el efecto
+puntos**, porque el prompt sí recupera términos que antes se perdían, pero la **precisión baja
+1.04**, porque empieza a colar términos del glosario donde no los hay. Es exactamente el efecto
 adverso para el que se diseñó esa métrica, y sin ella habría pasado desapercibido bajo un
 WER plano.
 

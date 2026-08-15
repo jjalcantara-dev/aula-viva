@@ -396,6 +396,32 @@ técnicas. **Esto convierte R1 en un riesgo de validez, no solo de disponibilida
 corpus realista no es que los resultados sean peores, es que no hay fenómeno que medir.
 Argumento a llevar explícitamente a la reunión de F0.
 
+### ✅ R16 — El modelo base envejece durante el desarrollo — **MITIGADO (agosto 2026)**
+Un TFM que abarca varios meses corre un riesgo que no es técnico sino de **defensa**: el
+modelo elegido al principio deja de ser el estado del arte antes de la entrega, y la
+comparativa entera queda expuesta a la pregunta «¿por qué ese modelo y no el que salió
+después?». Se materializó: aparecieron modelos multilingües de arquitectura distinta con
+mejores cifras publicadas, y exp-000 solo comparaba variantes de una misma familia.
+
+Es fácil de subestimar porque **no rompe nada**: los resultados siguen siendo válidos, solo
+que su premisa deja de estar justificada.
+
+**Mitigación aplicada:** medirlo en lugar de argumentarlo (exp-004, 800 clips). El
+resultado sostiene la elección inicial, y por un motivo más fuerte del previsto: el
+candidato gana en WER sobre habla leída y conserva mucho mejor el contenido crítico, pero
+**traduce al inglés en 13 clips** y su arquitectura no admite forzar el idioma. Se aplica
+el mismo criterio de R14 y de la decisión 002: en accesibilidad el modo de fallo pesa más
+que el WER agregado.
+
+**Lo que deja para el futuro:** el veredicto es sobre ese modelo tal como se distribuye
+hoy. Un ajuste fino sobre español o una variante con control de idioma cambiarían el
+balance, y así queda recogido como trabajo futuro en lugar de como conclusión cerrada.
+
+**Regla que se deriva:** el catálogo de modelos auditados (`research/MODELOS.md`) se revisa
+igual que el de corpus. Y todo candidato debe poder recibir «transcribe en español» y
+obedecer; un modelo multilingüe con detección automática derivará de idioma justo cuando el
+audio sea difícil, que es cuando un sistema de accesibilidad menos puede permitírselo.
+
 ### ✅ R2 — GPU AMD + entorno Linux para entrenamiento — **MITIGADO (M0)**
 > Verificado con `tools/check_gpu.py`: RX 9070 XT (gfx1201) + ROCm 7.2.4 + torch 2.13
 > calcula correctamente y **entrena** (backward + AdamW convergiendo, autocast bf16 OK),

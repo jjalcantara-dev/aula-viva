@@ -45,8 +45,8 @@ con ventanas de 1 segundo.
 
 **Corregido** con `Solapamiento.Fusionar` en `Accesibilidad.Core`, que recorta el mayor
 solape entre el final del texto ya emitido y el principio del nuevo. Cubierto por pruebas
-en `app/tests/`. Gracias a eso la aplicación puede conservar el solapamiento —que evita
-partir palabras en la frontera— sin pagar su coste.
+en `app/tests/`. Gracias a eso la aplicación puede conservar el solapamiento, que evita
+partir palabras en la frontera, sin pagar su coste.
 
 ## Hallazgo 2 — el troceado sigue siendo caro, y la latencia utilizable es peor de lo esperado
 

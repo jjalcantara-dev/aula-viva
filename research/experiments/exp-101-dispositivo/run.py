@@ -112,7 +112,7 @@ def main():
             apto = r["factor_tiempo_real"].get("cpu", 0)
             print(f"  {r['modelo'].split('/')[-1]:<16} {r['aceleracion_gpu']:.1f}x"
                   f"   (en CPU: {apto:.1f}x tiempo real"
-                  f"{' — margen insuficiente para subtitulado en vivo' if apto < 3 else ''})")
+                  f"{': margen insuficiente para subtitulado en vivo' if apto < 3 else ''})")
 
     salida = AQUI / "results"
     salida.mkdir(exist_ok=True)
