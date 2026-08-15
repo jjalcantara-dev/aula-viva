@@ -20,7 +20,7 @@ IP_LOCAL := $(shell ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K[\d.]+' |
 
 .DEFAULT_GOAL := ayuda
 .PHONY: ayuda entorno gpu test app asr demo parar corpus baseline \
-        direcciones demo-lora docker-amd docker-nvidia docker-parar exp-001 exp-002 exp-003 exp-100 exp-102 exp-103 exp-104 tablas estado limpiar
+        direcciones demo-lora docker-amd docker-nvidia docker-parar exp-001 exp-002 exp-003 exp-004 exp-100 exp-102 exp-103 exp-104 tablas estado limpiar
 
 ayuda:  ## Muestra esta ayuda
 	@echo "TFM — atajos disponibles:"
@@ -41,6 +41,13 @@ entorno:  ## Crea el venv y instala dependencias (una sola vez)
 
 gpu:  ## Verifica que la GPU calcula Y entrena
 	$(PY) tools/check_gpu.py
+
+huella:  ## Mide VRAM, RAM y disco del servicio ASR (requisitos de despliegue)
+	$(PY) tools/huella_recursos.py --modelo $(MODELO)
+	$(PY) tools/huella_recursos.py --modelo openai/whisper-small
+	$(PY) tools/huella_recursos.py --modelo $(MODELO) \
+	    --adaptador research/experiments/exp-003-lora/adaptador
+	$(PY) research/eval/report/tabla_huella.py
 
 # ----------------------------------------------------------- aplicación --
 
@@ -108,6 +115,10 @@ exp-003:  ## Ajuste fino con LoRA: entrena el adaptador y lo evalúa
 	$(DESPIERTO) $(PY) research/experiments/exp-003-lora/entrenar.py --epocas $(or $(EPOCAS),2)
 	$(DESPIERTO) $(PY) research/experiments/exp-003-lora/run.py
 
+exp-004:  ## ¿Es Whisper el modelo base correcto? Lo contrasta con Parakeet TDT
+	$(DESPIERTO) $(PY) research/experiments/exp-004-arquitecturas/run.py \
+	    --manifiesto $(MANIF) $(if $(N),--limite $(N),)
+
 exp-100:  ## Barrido de tamaño de ventana (latencia frente a calidad)
 	$(DESPIERTO) $(PY) research/experiments/exp-100-ventana/run.py \
 	    --manifiesto $(MANIF) --modelo $(MODELO) --limite 40 --solape 0
@@ -128,24 +139,53 @@ exp-104:  ## Robustez frente al ruido de aula (barrido de SNR)
 
 docker-amd:  ## Levanta el sistema en contenedores sobre GPU AMD (ROCm)
 	@$(MAKE) --no-print-directory direcciones
-	$(DESPIERTO) docker compose --profile amd up --build
+	$(DESPIERTO) docker compose --profile amd up --build --remove-orphans
 
 docker-nvidia:  ## Levanta el sistema en contenedores sobre GPU NVIDIA (CUDA)
 	@$(MAKE) --no-print-directory direcciones
-	$(DESPIERTO) docker compose --profile nvidia up --build
+	$(DESPIERTO) docker compose --profile nvidia up --build --remove-orphans
 
 docker-parar:  ## Detiene los contenedores sin borrar el modelo descargado
 	-docker compose --profile amd --profile nvidia down
 
 # --------------------------------------------------------- informes --
 
+# Corpus con tabla propia por modelo. La tabla agregada compara MATERIAL; estas comparan
+# MODELOS sobre muestra comun, que es la comparacion valida.
+CORPUS_TABLA = fleurs_es tedx_es teleconciencia_es mediaspeech_es voxpopuli_es
+
 tablas:  ## Regenera TODAS las tablas y figuras de la memoria
 	-$(PY) research/eval/report/tabla_corpus.py --decodificacion fallback
+	@# Se filtra la tabla pero NO los avisos: uno de ellos delata que las filas no
+	@# comparten muestra, que es justo lo que no debe pasar desapercibido.
+	@for c in $(CORPUS_TABLA); do \
+	    $(PY) research/eval/report/tabla_modelos.py --corpus $$c --decodificacion fallback \
+	        | grep -E '^(AVISO|       )' || true; \
+	done
 	-$(PY) research/eval/report/tabla_tecnicas.py
+	-$(PY) research/eval/report/tabla_arquitecturas.py
+	-$(PY) research/eval/report/estilo_numerico.py
+	-$(PY) research/eval/report/fuga_idioma.py
 	-$(PY) research/eval/report/anomalias.py --decodificacion fallback
 	-$(PY) research/eval/report/tabla_criticos.py --decodificacion fallback
+	-$(PY) research/eval/report/tabla_segmentacion.py
+	-$(PY) research/eval/report/tabla_ruido.py
+	-$(PY) research/eval/report/tabla_huella.py
 	-$(PY) research/eval/report/figura_modelos.py --corpus fleurs_es --decodificacion fallback
+	-$(PY) research/eval/report/figura_segmentacion.py
+	-$(PY) research/eval/report/figura_ruido.py
 	@echo "Tablas en memoria/tablas/ y figuras en memoria/figuras/"
+
+auditar:  ## Contrasta el archivo de resultados con los manifiestos actuales
+	$(PY) tools/auditar_resultados.py
+
+memoria: tablas  ## Regenera tablas y figuras y compila memoria/main.pdf
+	@command -v latexmk >/dev/null || { echo "falta latexmk (texlive)"; exit 1; }
+	cd memoria && latexmk -pdf -bibtex -halt-on-error -interaction=nonstopmode main.tex
+	@echo "-> memoria/main.pdf"
+
+memoria-limpiar:  ## Borra los auxiliares de LaTeX sin tocar el PDF
+	cd memoria && latexmk -c
 
 estado:  ## Resumen rápido del proyecto
 	@echo "Experimentos con resultados:"

@@ -113,22 +113,51 @@ def markdown(filas) -> str:
     return "\n".join(L)
 
 
+def veredicto_corto(r: dict) -> str:
+    """Mismo vocabulario que el Markdown. La distincion que importa es entre «no» y «sin
+    potencia»: la primera dice que no hay efecto, la segunda que esta medicion no puede
+    saberlo. Presentarlas igual, como se hacia antes en el LaTeX, convierte una carencia
+    de muestra en un resultado negativo."""
+    n = r["palabras"] or 0
+    if n and n < PALABRAS_MINIMAS:
+        return "Sin potencia"
+    if r["concluyente"]:
+        return "Sí"
+    if r.get("discrepan"):
+        return "En el límite"
+    return "No"
+
+
+def _miles(n: int) -> str:
+    """Separador de millar espanol, que es el punto. Se formatea aparte para no tocar las
+    comas del intervalo de confianza, que van en la misma fila."""
+    return f"{n:,}".replace(",", ".")
+
+
 def latex(filas) -> str:
+    usables = [r for r in filas if r["ic"]]
     cuerpo = "\n".join(
         f"    {r['tecnica']} & \\texttt{{{r['corpus'].replace('_', '-')}}} & "
+        f"{_miles(r['palabras'] or 0)} & "
         f"{r['wer_base']:.2f} & {r['wer_tecnica']:.2f} & {r['delta']:+.2f} & "
         f"[{r['ic'][0]:+.2f}, {r['ic'][1]:+.2f}] & {r['p']:.3f} & "
-        f"{'Sí' if r['concluyente'] else 'No'} \\\\" for r in filas if r["ic"])
+        f"{veredicto_corto(r)} \\\\"
+        for r in usables)
+    sin_potencia = sum(1 for r in usables if veredicto_corto(r) == "Sin potencia")
     return f"""% GENERADO AUTOMATICAMENTE por research/eval/report/tabla_tecnicas.py
 % No editar a mano.
+%
+% {sin_potencia} de {len(usables)} filas quedan marcadas «Sin potencia». Si esta cuenta
+% cambia, hay que revisar la cifra que da el capitulo de conclusiones al verificar el
+% objetivo 3.
 \\begin{{table}}[h]
 \\centering
 \\footnotesize
 \\setlength{{\\tabcolsep}}{{4pt}}
 \\resizebox{{\\textwidth}}{{!}}{{%
-\\begin{{tabular}}{{|l|l|r|r|r|c|r|c|}}
+\\begin{{tabular}}{{|l|l|r|r|r|r|c|r|c|}}
     \\hline
-    \\textbf{{Técnica}} & \\textbf{{Corpus}} & \\textbf{{WER base}} &
+    \\textbf{{Técnica}} & \\textbf{{Corpus}} & \\textbf{{Palabras}} & \\textbf{{WER base}} &
     \\textbf{{WER téc.}} & \\textbf{{$\\Delta$ (pp)}} & \\textbf{{IC 95\\%}} &
     \\textbf{{$p$}} & \\textbf{{Signif.}} \\\\
     \\hline
@@ -137,7 +166,13 @@ def latex(filas) -> str:
 \\end{{tabular}}}}
 \\caption{{Efecto de cada técnica de adaptación sobre el WER (\\%), con diseño pareado.
 $\\Delta$ negativo indica mejora. El intervalo de confianza se obtiene por bootstrap
-remuestreando clips; $p$ corresponde al test de signos sobre los clips que cambian.}}
+remuestreando clips; $p$ corresponde al test de signos sobre los clips que cambian.
+La columna de significación distingue tres situaciones que no deben confundirse:
+\\emph{{Sí}} cuando ambos criterios coinciden, \\emph{{En el límite}} cuando discrepan
+entre sí, y \\textbf{{\\emph{{Sin potencia}}}} cuando la muestra no alcanza las
+{_miles(PALABRAS_MINIMAS)} palabras de referencia que exige la sección~\\ref{{sec:potencia}}.
+Estas últimas no dicen que la técnica no funcione: dicen que con ese material no se puede
+saber, y por eso no se interpretan.}}
 \\label{{tab:comparativa-tecnicas}}
 \\end{{table}}
 """
