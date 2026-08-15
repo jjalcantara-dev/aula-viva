@@ -8,16 +8,19 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(opciones =>
     {
-        // El audio viaja por el mismo websocket que usa Blazor para la interfaz, y el
-        // límite por defecto de SignalR son 32 KB por mensaje. Un fragmento de 500 ms a
-        // 16 kHz en PCM de 16 bits ocupa 16 KB: entra por los pelos, con factor 2. Subir
-        // MsPorFragmento a 1 s rompería la captura con un error de conexión poco
-        // descriptivo, sin que nada apunte al tamaño del mensaje.
+        // Lotes de render pendientes de confirmar. Los subtítulos se empujan a todos los
+        // clientes a la vez y un receptor lento no debe frenar al resto ni tirar su
+        // circuito; 10 da holgura para un aula sin permitir que la cola crezca sin fin.
         opciones.MaxBufferedUnacknowledgedRenderBatches = 10;
     })
     .AddHubOptions(hub =>
     {
-        // 128 KB deja margen para fragmentos de hasta 4 s.
+        // ESTE es el límite que afecta a la captura, y no el de arriba. El audio viaja
+        // por el mismo websocket que usa Blazor para la interfaz, y el máximo por mensaje
+        // que trae SignalR de serie son 32 KB. Un fragmento de 500 ms a 16 kHz en PCM de
+        // 16 bits ocupa 16 KB: entra por los pelos, con factor 2. Subir MsPorFragmento a
+        // 1 s con el valor de serie rompería la captura con un error de conexión que no
+        // apunta al tamaño del mensaje. 128 KB deja margen hasta 4 s por fragmento.
         hub.MaximumReceiveMessageSize = 128 * 1024;
     });
 
@@ -70,8 +73,15 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 // Solo red local. Va ANTES que nada: si la petición no viene de una red privada, no
-// llega a ejecutarse nada más. Ver Accesibilidad.Core/LocalNetworkOnly.cs para el motivo
-// —difundimos audio de aula— y por qué no basta con no abrir el puerto del router.
+// llega a ejecutarse nada más. Ver Accesibilidad.Core/LocalNetworkOnly.cs para el motivo,
+// que es que difundimos audio de aula, y por qué no basta con no abrir el puerto del
+// router.
+//
+// PRECONDICIÓN: se comprueba la IP de la conexión, sin UseForwardedHeaders. Es correcto
+// en el despliegue documentado, donde los contenedores comparten la red del anfitrión y
+// esa IP es la del cliente real. Detrás de un proxy inverso la comprobación vería siempre
+// la del proxy y dejaría pasar cualquier origen: si algún día se pone uno delante, hay
+// que configurar las cabeceras reenviadas ANTES de este middleware.
 if (builder.Configuration.GetValue("Aula:SoloRedLocal", true))
 {
     app.Use(async (contexto, siguiente) =>
@@ -86,6 +96,19 @@ if (builder.Configuration.GetValue("Aula:SoloRedLocal", true))
         await siguiente();
     });
 }
+
+// Señal de vida para el orquestador de contenedores. Va DESPUES del filtro de red local a
+// propósito: la comprobación llega por bucle local, que es rango privado, así que pasa; y
+// que no tenga excepción propia evita abrir un hueco en la única barrera del sistema.
+//
+// Devuelve el motor en uso, no solo un "ok": si la aplicación arranca con el motor
+// simulado en un despliegue real, el contenedor estaría sano y los subtítulos serían
+// inventados. Es barato hacerlo visible aquí.
+app.MapGet("/salud", (IServiceProvider sp) => Results.Ok(new
+{
+    estado = "vivo",
+    motor = sp.CreateScope().ServiceProvider.GetRequiredService<IAsrEngine>().Name,
+}));
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 

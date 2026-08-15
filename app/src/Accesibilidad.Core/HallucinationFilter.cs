@@ -15,10 +15,16 @@ namespace Accesibilidad.Core;
 /// gramatical, se lee con naturalidad y el alumno no tiene ninguna forma de detectar que
 /// no corresponde a lo dicho. Un subtítulo ausente se nota; uno inventado, no.</para>
 ///
-/// <para><b>Qué no es.</b> No detecta alucinaciones plausibles en el dominio, que siguen
-/// siendo posibles; para eso haría falta comparar con el audio. Cubre los dos patrones
-/// documentados y reproducibles: las muletillas del corpus de entrenamiento y los bucles
-/// de repetición.</para>
+/// <para><b>Qué no es.</b> No detecta alucinaciones plausibles en el dominio, y esa
+/// limitación está confirmada en uso real: tras incorporar el filtro, el sistema
+/// transcribió <i>«me he mantenido en silencio durante la noche»</i> donde el docente
+/// había dicho <i>«durante 30 o 40 segundos»</i>. La salida es gramatical, encaja en el
+/// contexto y tiene longitud normal; ninguna heurística de superficie la distingue de
+/// habla real. Detectarla exigiría contrastar con el audio.</para>
+///
+/// <para>Cubre por tanto los dos patrones que sí son reconocibles por su forma: las
+/// muletillas del corpus de entrenamiento y los bucles de repetición. Es una reducción
+/// del riesgo, no una garantía, y así debe presentarse a quien despliegue el sistema.</para>
 /// </summary>
 public static class HallucinationFilter
 {

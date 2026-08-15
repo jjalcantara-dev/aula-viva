@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Para reconstruir el arranque real del host en ConfiguracionTests: la
+         configuración de registro solo falla cuando alguien la enlaza, no al leer el
+         JSON, así que comprobarla exige montar el mismo canal que monta la aplicación. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -20,6 +26,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Accesibilidad.Core\Accesibilidad.Core.csproj" />
+    <!-- WhisperOptions vive aquí, y es el objeto contra el que se enlaza la sección Asr
+         del appsettings. Sin esta referencia no se puede comprobar que el fichero de
+         configuración y las propiedades de C# siguen coincidiendo, que es un enlace que
+         falla en silencio. -->
+    <ProjectReference Include="..\..\src\Accesibilidad.Asr\Accesibilidad.Asr.csproj" />
   </ItemGroup>
 
 </Project>
