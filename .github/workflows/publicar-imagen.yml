@@ -1,0 +1,74 @@
+# Publica la imagen de la APLICACION en el registro de contenedores de GitHub.
+#
+# Solo la aplicacion, y no el servicio de reconocimiento, por una razon de tamano: la
+# imagen de ASR es una capa fina de dependencias sobre una base de ROCm o CUDA que pesa
+# decenas de gigabytes. Publicarla significaria alojar y descargar esa base a traves del
+# registro en vez de desde su origen, que ya la distribuye. La aplicacion, en cambio, ronda
+# los 230 MB y es la que un centro quiere levantar sin instalar el kit de desarrollo.
+#
+# Se dispara SOLO con etiquetas de version. Publicar en cada empuje a la rama principal
+# convertiria "latest" en un blanco movil, que es justo lo que este proyecto evita en los
+# resultados y no hay motivo para tolerar en los artefactos.
+#
+#   git tag -a v1.0.0 -m "primera version desplegable"
+#   git push origin v1.0.0
+
+name: Publicar imagen de la aplicacion
+
+on:
+  push:
+    tags: ["v*"]
+  # Permite lanzarlo a mano desde la pestana Actions para probar el flujo sin etiquetar.
+  workflow_dispatch:
+
+env:
+  REGISTRO: ghcr.io
+  IMAGEN: ${{ github.repository }}/app
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Comprobar que las pruebas pasan
+        # No se publica una imagen sin pasar antes las pruebas del nucleo. Son 88 y tardan
+        # menos de un minuto: no hay excusa para saltarselas, y una imagen publicada con la
+        # deduplicacion de solapamiento rota llegaria a un aula.
+        run: dotnet test app --nologo -v q
+
+      - name: Preparar el constructor
+        uses: docker/setup-buildx-action@v3
+
+      - name: Autenticarse en el registro
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRO }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Calcular etiquetas
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRO }}/${{ env.IMAGEN }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Construir y publicar
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/app.Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

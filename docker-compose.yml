@@ -19,6 +19,19 @@
 #
 # Reparto resultante: el reconocedor escucha solo en bucle local, y la aplicacion en todas
 # las interfaces. Que es exactamente lo que se quiere.
+#
+# POLITICA DE REINICIO. Los tres servicios usan ${REINICIO}, que por defecto vale "no":
+# en un equipo de desarrollo, unos contenedores que resucitan en cada arranque del sistema
+# son una molestia, y el del reconocimiento ademas mantiene un nucleo ocupado en espera
+# activa y varios GB de RAM mientras vive.
+#
+# En un DESPLIEGUE REAL de aula se quiere lo contrario, porque el servidor debe volver solo
+# tras un corte de luz. Ahi hay que ponerlo en el .env:
+#
+#   REINICIO=unless-stopped
+#
+# Se elige "unless-stopped" y no "always" para que, cuando alguien lo pare a mano, siga
+# parado hasta que se decida arrancarlo.
 
 services:
 
@@ -28,13 +41,21 @@ services:
       context: .
       dockerfile: docker/asr.Dockerfile
       args:
-        BASE: rocm/pytorch:latest
+        # Anclada, no "latest": una base que se mueve sola hace que dos construcciones del
+        # mismo commit den imagenes distintas. Se puede cambiar desde el .env si el
+        # controlador del equipo exige otra version de ROCm.
+        BASE: ${BASE_ASR_AMD:-rocm/pytorch:rocm6.4.1_ubuntu24.04_py3.12_pytorch_release_2.6.0}
     environment:
       MODELO: ${MODELO:-openai/whisper-medium}
       # Ruta al adaptador de exp-003 dentro del contenedor; vacío sirve el modelo base.
       ADAPTADOR: ${ADAPTADOR:-}
     volumes:
       - cache-modelos:/cache/huggingface
+      # ROCm no trae base de datos de núcleos precompilados para gfx1201 (avisa con
+      # "gfx1201_32.HIP.fdb.txt is unreadable"), así que MIOpen los compila la primera vez
+      # y los guarda aquí. Sin volumen esa caché muere con el contenedor y se recompila en
+      # CADA arranque. Cubre también las cachés de Triton y del compilador de ROCm.
+      - cache-nucleos:/root/.cache
       - ./research/experiments/exp-003-lora/adaptador:/adaptador:ro
     devices:
       - /dev/kfd    # interfaz de cómputo de ROCm
@@ -47,7 +68,7 @@ services:
     security_opt: ["seccomp:unconfined"]
     ipc: host
     network_mode: host
-    restart: unless-stopped
+    restart: ${REINICIO:-no}
 
   asr-nvidia:
     profiles: ["nvidia"]
@@ -71,9 +92,18 @@ services:
               count: 1
               capabilities: [gpu]
     network_mode: host
-    restart: unless-stopped
+    restart: ${REINICIO:-no}
 
   app:
+    # Imagen publicada: un centro no necesita el kit de desarrollo de .NET ni esperar a que
+    # compile. `build` se conserva debajo, de modo que `docker compose build app` sigue
+    # reconstruyendola desde el codigo local cuando se esta desarrollando; compose usa la
+    # imagen si existe y la construye si no.
+    #
+    # La version va anclada y no en "latest" a proposito: un despliegue de aula no debe
+    # cambiar de version solo porque alguien publique una nueva. Se sube a mano editando
+    # VERSION_APP en el .env, despues de leer las notas de la etiqueta.
+    image: ghcr.io/jjalcantara-dev/tfm-ia/app:${VERSION_APP:-latest}
     build:
       context: .
       dockerfile: docker/app.Dockerfile
@@ -83,12 +113,21 @@ services:
       # Compartiendo red con el reconocedor, se alcanza por bucle local.
       Asr__Url: http://127.0.0.1:5601
       Aula__SoloRedLocal: "true"
-      Aula__ClaveDocente: ${CLAVE_DOCENTE:-}
+      # Obligatoria, y por eso ':?' y no ':-': con el valor vacío la vista de emisión queda
+      # abierta y cualquiera en la red del centro puede tomar el micrófono del aula. Antes
+      # se dejaba vacía por defecto, de modo que seguir el manual de despliegue sin definir
+      # la variable levantaba el sistema desprotegido sin decir nada. Que aquí falle el
+      # arranque convierte un descuido silencioso en un error con instrucciones.
+      #
+      # Para una prueba local sin aula de por medio:  CLAVE_DOCENTE=pruebas docker compose ...
+      Aula__ClaveDocente: ${CLAVE_DOCENTE:?define CLAVE_DOCENTE en el fichero .env (ver apendice de despliegue, paso 2). Sin ella la pagina de emision queda abierta a toda la red}
     network_mode: host
-    restart: unless-stopped
+    restart: ${REINICIO:-no}
 
 volumes:
   # El modelo pesa varios gigabytes; sin volumen se descargaría en cada arranque.
   cache-modelos:
+  # Núcleos de GPU compilados (MIOpen, Triton, compilador de ROCm). Ver el servicio.
+  cache-nucleos:
   # Claves de cifrado de la aplicación; ver el comentario en el servicio.
   claves-app:
