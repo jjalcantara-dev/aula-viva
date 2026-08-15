@@ -1,0 +1,24 @@
+# Qué se envía al construir las imágenes.
+#
+# POR QUÉ EN LISTA BLANCA. Sin este fichero, Docker manda el directorio entero al demonio
+# antes de mirar siquiera si hay caché: medido, 1,16 GB en cada construcción y una vez por
+# servicio, cuando los Dockerfiles solo copian tres carpetas. La mayor parte era el audio
+# del corpus (1 GB) y el entorno virtual (696 MB), que no pintan nada dentro de una imagen.
+#
+# Se ignora todo y se readmite lo necesario, en lugar de enumerar lo que sobra: así una
+# carpeta nueva queda fuera por omisión. Con una lista negra, cada carpeta que se añadiera
+# al proyecto volvería a inflar el contexto en silencio, que es justo lo que pasó.
+
+*
+
+# Lo único que copian los Dockerfiles.
+!app
+!serving
+!docker
+
+# Y dentro de eso, lo que se reconstruye en la imagen o no debe viajar.
+app/**/bin
+app/**/obj
+**/__pycache__
+**/*.pyc
+**/.DS_Store

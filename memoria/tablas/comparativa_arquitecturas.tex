@@ -1,0 +1,29 @@
+% GENERADO AUTOMATICAMENTE por research/eval/report/tabla_arquitecturas.py
+% No editar a mano.
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|l|r|r|r|r|r|r|c|l|}
+    \hline
+    \textbf{Corpus} & \textbf{Modelo} & \textbf{Par. (M)} & \textbf{WER} &
+    \textbf{Crít.} & \textbf{Crít. s/n} & \textbf{Vel.} &
+    \textbf{$\Delta$ (pp)} & \textbf{IC 95\%} & \textbf{Veredicto} \\
+    \hline
+    \texttt{teleconciencia-es-400} & \texttt{whisper-medium} & 764 & 19.55 & 22.17 & 23.08 & 8$\times$ & --- & --- & referencia \\
+    \texttt{teleconciencia-es-400} & \texttt{parakeet-tdt-0.6b-v3} & 627 & 19.83 & 10.36 & 10.00 & 106$\times$ & +0.28 & [-1.28, +2.03] & sin evidencia \\
+    \texttt{voxpopuli-es-400} & \texttt{whisper-medium} & 764 & 9.63 & 17.52 & 7.74 & 8$\times$ & --- & --- & referencia \\
+    \texttt{voxpopuli-es-400} & \texttt{parakeet-tdt-0.6b-v3} & 627 & 6.83 & 4.46 & 4.33 & 44$\times$ & -2.80 & [-3.48, -2.20] & mejora \\
+    \hline
+\end{tabular}}
+\caption{Modelo base de la comparativa frente a una arquitectura de transductor, sobre
+los mismos clips. \textbf{Crít.} es la tasa de error sobre negaciones, numerales y
+cuantificadores, y \textbf{Crít. s/n} la misma tasa excluyendo numerales, cuyo recuento
+mide en parte la convención de escritura: la referencia escribe «dos mil diez» donde
+Whisper escribe «2010», y el alineamiento contabiliza tres errores por una cifra bien
+reconocida. \textbf{Vel.} es cuántas veces más rápido que el audio se procesa.
+$\Delta$ negativo indica mejora respecto al modelo base. Las decodificaciones no son
+equiparables entre arquitecturas: cada sistema se evalúa en su configuración estándar.}
+\label{tab:comparativa-arquitecturas}
+\end{table}

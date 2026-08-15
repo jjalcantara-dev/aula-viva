@@ -1,0 +1,129 @@
+\chapter{Registro de riesgos}
+\label{ap:riesgos}
+
+Este apéndice recoge el registro de riesgos que guió la ejecución del trabajo. Se incluye
+por dos motivos. El primero es que varias decisiones de diseño de los capítulos anteriores
+no se entienden sin él: no se eligieron por ser las mejores en abstracto, sino por ser las
+que sobrevivían a un riesgo concreto. El segundo es que seis de los dieciséis riesgos
+\emph{no} estaban previstos: se detectaron midiendo, no planificando, y esa es en sí misma
+una observación sobre cómo se planifica un trabajo de esta naturaleza.
+
+\section{Riesgos previstos en la planificación inicial}
+
+Los diez de la tabla~\ref{tab:riesgos-previstos} se identificaron antes de empezar a
+medir. Dos de ellos se materializaron, y que estuvieran previstos es lo que evitó que
+descarrilaran el trabajo.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|c|p{5.1cm}|p{5.6cm}|c|}
+\hline
+\textbf{Id} & \textbf{Riesgo} & \textbf{Mitigación aplicada} & \textbf{Estado} \\
+\hline
+R1 & No existe corpus educativo en español con transcripción de referencia fiable y de
+     acceso abierto & Dos planes aplicados: corpus públicos con el desajuste de dominio
+     medido y declarado, y subtítulos existentes verificados a mano. El tercero, la
+     solicitud institucional del corpus objetivo, queda redactado y dirigido pero su
+     tramitación excede el plazo & Materializado \\
+\hline
+R2 & Entrenar sobre tarjeta gráfica AMD puede resultar inviable & Verificar en la primera
+     fase que la tarjeta \emph{entrena}, con un ciclo mínimo, antes de comprometer la
+     técnica que lo necesita & Mitigado \\
+\hline
+R3 & Datos insuficientes para el ajuste fino & Última en el orden de ejecución y segunda en
+     el de recorte; no comprometerla hasta resolver R1 y R2 & No materializado \\
+\hline
+R4 & Latencia insuficiente para operar en directo & Instrumentar la medida desde el primer
+     prototipo y reportar la latencia real aunque no cumpla & Mitigado \\
+\hline
+R5 & El doble núcleo duplica el trabajo & Tratar la aplicación como vehículo de
+     demostración y banco de pruebas, no como contribución con validación propia &
+     Materializado \\
+\hline
+R6 & La comparativa no arroja diferencias concluyentes & Protocolo congelado de antemano
+     para que un resultado negativo siga siendo defendible; reportar variabilidad y no solo
+     medias & Materializado \\
+\hline
+R7 & Redacción tardía & Escribir desde la primera fase, en borradores parciales & Mitigado \\
+\hline
+R8 & Resultados no reproducibles & Una configuración por experimento, semillas fijadas,
+     procedencia en cada salida, tablas generadas y no copiadas & Mitigado \\
+\hline
+R9 & Tratamiento de datos personales & No grabar material propio; el corpus empleado tiene
+     licencia de investigación. La restricción de red la impone la aplicación & Mitigado \\
+\hline
+R10 & Disponibilidad personal & Planificación en fases relativas y puntos de recorte
+      explícitos & Mitigado \\
+\hline
+\end{tabular}
+\caption{Riesgos identificados durante la planificación.}
+\label{tab:riesgos-previstos}
+\end{table}
+
+R1 se materializó en su forma más costosa: el corpus objetivo no se obtuvo, y el trabajo se
+ejecutó sobre sustitutos. R6 también, y de ahí que dos de las tres técnicas evaluadas no
+produzcan efecto concluyente. Que ambos estuvieran previstos es lo que permitió que su
+materialización no descarrilara el trabajo: el criterio de significación y la política de
+marcar como no concluyente lo que no alcanza potencia estaban fijados antes de saber qué
+iban a dar los datos.
+
+\section{Riesgos detectados midiendo}
+
+Los seis siguientes no aparecían en la planificación. Se documentan aparte porque comparten
+un rasgo, visible en la tabla~\ref{tab:riesgos-emergentes}: ninguno se manifestó como un
+problema, sino como un resultado creíble.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|c|p{5.1cm}|p{5.6cm}|c|}
+\hline
+\textbf{Id} & \textbf{Riesgo} & \textbf{Mitigación aplicada} & \textbf{Estado} \\
+\hline
+R11 & La calidad de la transcripción de referencia varía entre corpus y se confunde con
+      rendimiento del modelo & Auditoría manual de una muestra antes de adoptar cualquier
+      corpus; reportar el error con y sin normalización de tildes como cota superior e
+      inferior & Mitigado \\
+\hline
+R12 & Efecto suelo: sobre voz leída el modelo sin adaptar ya acierta casi todo y no queda
+      margen donde las técnicas puedan demostrar nada & Trasladar la comparativa al material
+      de habla espontánea, donde el error base deja margen & Mitigado \\
+\hline
+R13 & Desajuste de variedad dialectal entre corpus y destino & Medido: a registro
+      equivalente la diferencia entre variedades es de dos décimas, frente a los veinte
+      puntos que separa el registro. Queda descartado como factor & Descartado \\
+\hline
+R14 & La configuración de decodificación es un factor de confusión que mueve el error hasta
+      trece puntos & Congelarla e incorporarla a la identidad de cada resultado & Mitigado \\
+\hline
+R15 & Decisiones de alcance bloqueadas a la espera de validación externa & Tomar decisiones
+      provisionales documentadas y marcadas como revisables, con cola viva de preguntas
+      pendientes; avanzar mientras tanto en lo que no depende de terceros & Materializado \\
+\hline
+R16 & El modelo base envejece durante el desarrollo y la elección deja de estar justificada
+      & Medirlo en lugar de argumentarlo: contraste con una arquitectura distinta sobre 800
+      fragmentos, y catálogo de modelos auditados que se revisa igual que el de corpus &
+      Mitigado \\
+\hline
+\end{tabular}
+\caption{Riesgos detectados durante la ejecución, ausentes de la planificación inicial.}
+\label{tab:riesgos-emergentes}
+\end{table}
+
+R14 y R16 merecen un comentario conjunto, porque ilustran los dos extremos del mismo
+problema. R14 era invisible desde dentro: dos ejecuciones del mismo modelo sobre el mismo
+corpus daban cifras incomparables y nada lo delataba. R16 era invisible desde fuera: los
+resultados seguían siendo correctos, y lo que envejecía era su premisa. Ninguno de los dos
+habría aparecido en una revisión del código o de los resultados; el primero exigió comparar
+ejecuciones que no debían diferir, y el segundo mirar fuera de la familia de modelos
+elegida.
+
+R15 condicionó el método de trabajo más que ningún otro. La norma adoptada ante cualquier
+decisión de alcance que no pudiera cerrarse en el momento fue la misma: elegir una opción
+razonable por defecto, dejar constancia escrita del motivo en un registro de decisiones y
+marcarla como revisable, en lugar de detener el trabajo. El coste de esa política es que
+varias decisiones quedan documentadas y argumentadas pero pendientes de validación; el
+beneficio es que ninguna de ellas bloqueó el avance del resto.

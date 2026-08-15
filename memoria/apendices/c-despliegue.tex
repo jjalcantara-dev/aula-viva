@@ -1,0 +1,608 @@
+\chapter{Despliegue y uso del sistema}
+\label{ap:despliegue}
+
+El capítulo~\ref{cap:desarrollo} explica \emph{por qué} el despliegue tiene la forma que
+tiene. Este apéndice explica \emph{cómo} se ejecuta, paso a paso, y está escrito para quien
+tenga que ponerlo en marcha en un centro sin haber participado en el desarrollo: el
+responsable informático el primer día, y el docente cada mañana.
+
+\section{Qué hace falta antes de empezar}
+
+El sistema se despliega en \textbf{un solo equipo del centro}, que actúa de servidor y hace
+todo el trabajo. Los dispositivos del alumnado no necesitan absolutamente nada salvo un
+navegador y estar en la misma red: no instalan, no calculan y no conceden permisos. Esa
+asimetría es deliberada y se justifica en la sección~\ref{sec:arquitectura-app}; para el
+despliegue lo que implica es que solo hay un equipo del que preocuparse.
+
+Los requisitos de ese equipo no son una lista de recomendaciones: cada uno procede de una
+medición del capítulo~\ref{cap:desarrollo} y puede comprobarse antes de dar una clase con el
+sistema. Se presentan en dos tablas porque responden a dos preguntas distintas: la
+tabla~\ref{tab:requisitos-despliegue} dice \emph{qué equipo hace falta}, que es una decisión
+de compra, y la tabla~\ref{tab:requisitos-entorno} \emph{qué hay que preparar} en el que ya
+se tenga.
+
+\begin{table}[!ht]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|p{2.5cm}|p{3.3cm}|p{6.2cm}|}
+\hline
+\textbf{Elemento} & \textbf{Requisito} & \textbf{De dónde sale} \\
+\hline
+Tarjeta gráfica &
+    Dedicada, con al menos \textbf{4~GB} de memoria propia. No hace falta gama alta. &
+    Medido: el modelo ocupa 1,60~GB de memoria de vídeo en el peor caso
+    (tabla~\ref{tab:huella}). El resto es margen para el escritorio del propio equipo y la
+    fragmentación de memoria. Sin tarjeta dedicada el sistema arranca, pero no sostiene el
+    ritmo del audio en directo (sección~\ref{sec:hardware}). \\
+\hline
+Memoria del sistema &
+    \textbf{8~GB}. &
+    El proceso de reconocimiento ocupa 2,76~GB residentes; la aplicación y el sistema
+    operativo caben holgadamente en el resto. \\
+\hline
+Procesador &
+    Cuatro núcleos o más. Cualquiera de los últimos años sirve. &
+    No calcula el modelo: despacha el trabajo a la tarjeta gráfica. Conviene saber que
+    \textbf{un núcleo queda ocupado al 100\% de forma permanente} mientras el servicio está
+    vivo, incluso en reposo: es espera activa del entorno de ejecución de la GPU, no trabajo
+    real, y no indica ningún problema. \\
+\hline
+Almacenamiento &
+    Depende de la vía: \textbf{5~GB} nativa, \textbf{100~GB} en contenedores sobre AMD. &
+    El modelo son 2,85~GB en ambos casos. La diferencia no la causa el sistema sino la
+    imagen base de la plataforma de AMD, y se detalla más abajo porque es lo bastante grande
+    como para condicionar la elección de equipo. \\
+\hline
+\end{tabular}
+\caption{Requisitos de hardware del equipo servidor, con la medición que respalda cada uno.}
+\label{tab:requisitos-despliegue}
+\end{table}
+
+\begin{table}[!ht]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|p{2.5cm}|p{3.3cm}|p{6.2cm}|}
+\hline
+\textbf{Elemento} & \textbf{Requisito} & \textbf{Observación} \\
+\hline
+Sistema operativo &
+    Linux permite el despliegue en contenedores; en macOS con Apple Silicon hay que
+    ejecutar de forma nativa. &
+    No es indiferente: en macOS los contenedores no alcanzan la GPU. Conviene leer la
+    sección~\ref{sec:contenedores} \emph{antes} de elegir procedimiento. \\
+\hline
+Acceso a la GPU &
+    Con AMD, pertenecer a los grupos \texttt{video} y \texttt{render}. Con NVIDIA, el
+    conjunto de herramientas de contenedores del fabricante. &
+    Es el fallo de arranque más frecuente. Se comprueba con
+    \texttt{getent group video render}, cuyos identificadores numéricos deben coincidir con
+    los del descriptor de contenedores. \\
+\hline
+Micrófono &
+    De solapa o diadema, próximo a la boca del docente. No vale el micrófono integrado del
+    equipo ni uno ambiental. &
+    Medido: el sistema tolera ruido hasta 15~dB de relación señal-ruido, y por debajo se
+    degrada de golpe en lugar de gradualmente (sección~\ref{sec:ruido}). La proximidad del
+    micrófono es lo que mantiene ese margen cuando el aula se anima. \\
+\hline
+Red &
+    Red local del centro, con el equipo servidor y los dispositivos del alumnado en el
+    mismo rango. &
+    La aplicación rechaza toda conexión que no provenga de un rango privado. No es
+    configurable: es un requisito legal del sistema
+    (sección~\ref{sec:requisitos-legales}). Si hiciera falta acceso desde fuera, la vía es
+    una red privada virtual hasta el centro. \\
+\hline
+Navegador &
+    Cualquiera moderno, tanto en el equipo del docente como en los del alumnado. &
+    La emisión debe abrirse en el propio equipo servidor, por una restricción de los
+    navegadores que se explica en el paso 4. \\
+\hline
+\end{tabular}
+\caption{Requisitos de entorno y periféricos.}
+\label{tab:requisitos-entorno}
+\end{table}
+
+Conviene señalar lo que \emph{no} aparece en ninguna de las dos, porque suele darse por supuesto: no
+hace falta conexión a internet durante la clase, ni cuenta en ningún servicio, ni licencia de
+software. La única descarga es la del modelo, y ocurre una sola vez en el primer arranque.
+Esto es consecuencia directa de que el reconocimiento se ejecute en el centro y no en la nube
+(sección~\ref{sec:requisitos-legales}).
+
+\subsection*{De dónde salen esas cifras}
+
+Los tres requisitos de memoria y almacenamiento proceden de una medición directa del
+servicio en ejecución, no del tamaño nominal del modelo, que es lo que suele citarse y
+además induce a error. La tabla~\ref{tab:huella} recoge el detalle.
+
+\input{tablas/huella}
+
+Dos lecturas de esa tabla importan para decidir la compra. La primera es que el requisito de
+memoria de vídeo es \textbf{mucho menor de lo que sugiere el tamaño del modelo en disco}:
+2,85~GB ocupados en almacenamiento se traducen en 1,60~GB de memoria de vídeo, porque los
+pesos se cargan en precisión reducida. Una tarjeta de 4~GB, que hoy es la gama de entrada,
+sobra. Lo que el sistema necesita no es una tarjeta grande sino, simplemente, una tarjeta.
+
+La segunda es que existe una salida si el equipamiento disponible se queda corto: el modelo
+inmediatamente menor baja el pico a 0,56~GB y el almacenamiento a 0,90~GB. Cuesta calidad,
+entre uno y dos puntos de tasa de error según el material
+(tabla~\ref{tab:baseline-modelos-tedx-es}), pero es una degradación conocida y medida, no una
+sorpresa. La diferencia entre ambos modelos se estrecha además precisamente en habla
+espontánea, que es el registro del aula.
+
+Incorporar el modelo adaptado no cambia el cuadro: el adaptador añade 19~MB en disco y
+30~MB de memoria de vídeo, porque no sustituye al modelo sino que le agrega unas matrices
+pequeñas. Es la ventaja práctica de la técnica que ganó la comparativa, y la razón de que
+pueda distribuirse por separado.
+
+\subsection*{El almacenamiento, que es la sorpresa desagradable}
+
+Las cifras anteriores se refieren al modelo. El despliegue completo en contenedores sobre
+AMD ocupa mucho más, y conviene decirlo con claridad porque es el requisito que más se
+subestima:
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{|l|r|}
+\hline
+\textbf{Componente} & \textbf{Disco} \\
+\hline
+Imagen del reconocimiento (AMD) & 83,5~GB \\
+\hline
+Caché de núcleos de cálculo compilados & 11,6~GB \\
+\hline
+Caché del modelo & 3,1~GB \\
+\hline
+Imagen de la aplicación & 0,35~GB \\
+\hline
+\textbf{Total aproximado} & \textbf{$\sim$100~GB} \\
+\hline
+\end{tabular}
+\caption{Ocupación en disco del despliegue en contenedores sobre AMD, medida con
+\texttt{docker system df -v} en el equipo de desarrollo.}
+\label{tab:disco}
+\end{table}
+
+Lo llamativo es de dónde viene: \textbf{no es el modelo}, que son 2,85~GB, sino la imagen
+base de la plataforma de cálculo de AMD. Inspeccionarla por dentro explica el motivo, y el
+motivo es que el contenedor transporta código para tarjetas que el equipo no tiene.
+
+Esa plataforma compila por anticipado los núcleos de cálculo para cada arquitectura de
+tarjeta, y la imagen empleada los incluye \emph{todos}: su etiqueta declara literalmente
+\texttt{device-all}. Medido dentro de ella, una sola de sus bibliotecas de álgebra contiene
+núcleos para \textbf{veinticuatro arquitecturas distintas}, desde las de centro de datos
+hasta tres generaciones de tarjetas de consumo; de sus 792~MB, los que corresponden a la
+tarjeta empleada en este trabajo son \textbf{10~MB}. Otro componente aparece como trece
+bibliotecas separadas, una por arquitectura, que suman 4,4~GB y de las que se usa una.
+
+A ello se añaden dos circunstancias más. La imagen incluye el kit de \emph{desarrollo} de la
+plataforma, 15~GB de compiladores y cabeceras que no hacen falta para ejecutar inferencia
+pese a que la imagen se anuncia como de ejecución. Y los 11,6~GB de núcleos compilados en el
+primer arranque se generan porque, para la generación de tarjeta concreta empleada, esa
+plataforma no distribuye binarios precompilados y hay que producirlos en destino.
+
+Conviene precisar el grado de confianza de las cifras. Las de la tabla proceden de
+\texttt{docker system df -v}, que es lo que el sistema informa; el contenido real del sistema
+de ficheros de la imagen, medido desde dentro, son 34~GiB. La diferencia se debe a cómo el
+motor de contenedores contabiliza capas almacenadas y desplegadas, y no se ha podido acotar
+con precisión por requerir privilegios de administrador sobre su directorio de datos. Para
+planificar un despliegue conviene por tanto tomar la cifra alta, que es la conservadora.
+
+Tres consecuencias prácticas. La primera, que un equipo con un disco pequeño, que es lo
+habitual en un portátil de centro, puede quedarse sin espacio por esta vía y no por el
+modelo. La segunda, que la ejecución nativa ocupa alrededor de 5~GB y evita el problema por
+completo, lo que la convierte en una alternativa razonable y no en un apaño. La tercera, que
+esto es reducible: partir de una imagen base restringida a la familia de tarjeta del equipo,
+en lugar de a todas, eliminaría por construcción la mayor parte de lo que se transporta. No
+se ha hecho, de modo que no se aporta la cifra resultante; queda como la mejora pendiente
+más rentable del despliegue.
+
+Hay una última observación que afecta menos al espacio y más a la reproducibilidad, y por eso
+conviene dejarla escrita: la imagen base empleada es una compilación \textbf{nocturna} y no
+una versión estable, según declaran sus propios parámetros de construcción. Para el
+desarrollo es aceptable, porque era la vía de tener soporte de una tarjeta muy reciente; para
+un despliegue en un centro no lo es, porque la referencia se mueve bajo los pies y dos
+construcciones separadas en el tiempo no producen el mismo sistema. Fijar una versión estable
+concreta es requisito previo a cualquier distribución, y es coherente con el criterio que
+gobierna el resto del trabajo: un resultado que no se puede reconstruir no es un resultado.
+
+Del perfil de NVIDIA no se da cifra porque no se ha medido: no se dispuso de una tarjeta de
+ese fabricante. Cabe esperar que sea sustancialmente menor, porque su imagen base es de
+ejecución y no de desarrollo, pero es una expectativa y no un dato.
+
+\section{Cómo se distribuye el sistema}
+\label{sec:contenedores}
+
+\subsection*{Qué es un contenedor, y por qué se usa aquí}
+
+El sistema se entrega \textbf{contenerizado}. Un contenedor es un paquete que incluye el
+programa junto con todas sus dependencias, es decir el intérprete, las bibliotecas y sus
+versiones exactas, de modo que se ejecuta igual en cualquier equipo que tenga el motor de
+contenedores instalado, sin instalar nada más en el sistema anfitrión. Docker es la implementación
+empleada aquí, y es la habitual.
+
+La razón de recurrir a ello no es seguir una moda de despliegue: es que el entorno de este
+sistema es especialmente incómodo de montar a mano. Requiere una versión concreta de la
+biblioteca de cálculo, compilada contra la plataforma del fabricante de la tarjeta gráfica,
+más el entorno de ejecución de la aplicación. Reproducir eso en el equipo de un centro sería
+una tarde de trabajo para alguien con conocimientos, y una fuente permanente de averías al
+actualizar el sistema operativo. Con contenedores, el centro instala Docker y ejecuta un
+comando.
+
+El sistema se reparte en \textbf{dos contenedores} y no en uno, porque tienen necesidades
+distintas: el del reconocimiento necesita acceso a la tarjeta gráfica y pesa varios
+gigabytes; el de la aplicación web no necesita tarjeta y es pequeño. Separarlos permite
+además sustituir el modelo sin tocar la aplicación, que es la frontera descrita en la
+sección~\ref{sec:integracion}.
+
+\subsection*{Sobre qué sistemas operativos se puede ejecutar}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|p{3.1cm}|c|c|p{5.6cm}|}
+\hline
+\textbf{Sistema} & \textbf{Vía} & \textbf{Acelerador} & \textbf{Estado} \\
+\hline
+Linux, tarjeta AMD & Contenedores & ROCm &
+    \texttt{make docker-amd}. Es la plataforma de desarrollo del trabajo. \\
+\hline
+Linux, tarjeta NVIDIA & Contenedores & CUDA &
+    \texttt{make docker-nvidia}. Requiere el conjunto de herramientas de contenedores del
+    fabricante. \\
+\hline
+macOS, Apple Silicon & \textbf{Nativa} & MPS &
+    \texttt{make demo}. En contenedor no alcanza la GPU; se explica más abajo. \\
+\hline
+Windows, como cliente & \multicolumn{3}{p{8.4cm}|}{\textbf{Funciona sin nada especial.} Es
+    solo un navegador. Es además el caso más frecuente: los dispositivos del alumnado.} \\
+\hline
+Windows, como servidor & \multicolumn{3}{p{8.4cm}|}{No probado. Existe una vía a través del
+    subsistema Linux de Windows, pero el descriptor de contenedores requiere cambios; se
+    detalla más abajo.} \\
+\hline
+Sin tarjeta gráfica & \multicolumn{3}{p{8.4cm}|}{Arranca y transcribe, pero no sostiene el
+    directo. Sirve para verificar la instalación y la red del aula, no para dar clase.} \\
+\hline
+\end{tabular}
+\caption{Sistemas operativos sobre los que puede ejecutarse el servidor.}
+\label{tab:vias}
+\end{table}
+
+\subsection*{De dónde salen las imágenes}
+
+Conviene ser preciso en esto, porque determina lo que un centro tiene que hacer y lo que
+todavía no puede hacer.
+
+\textbf{Las imágenes de este sistema no están publicadas en ningún registro público.} No
+existe, por tanto, una orden \texttt{docker pull} que las descargue: se construyen en el
+propio equipo a partir del repositorio del proyecto, y eso es lo que hace la opción
+\texttt{-{}-build} de los comandos de la tabla~\ref{tab:vias}. El proceso, la primera vez,
+consiste en descargar las imágenes base públicas de las que se parte, instalar sobre ellas
+las dependencias declaradas y copiar el código del proyecto.
+
+Las imágenes base sí proceden de registros públicos, y son las que recoge la
+tabla~\ref{tab:imagenes-base}:
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Componente} & \textbf{Imagen base} \\
+\hline
+Reconocimiento, AMD & \texttt{rocm/pytorch} \\
+\hline
+Reconocimiento, NVIDIA & \texttt{pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime} \\
+\hline
+Aplicación, compilación & \texttt{mcr.microsoft.com/dotnet/sdk:10.0} \\
+\hline
+Aplicación, ejecución & \texttt{mcr.microsoft.com/dotnet/aspnet:10.0} \\
+\hline
+\end{tabular}
+\caption{Imágenes base de las que parten los contenedores del sistema.}
+\label{tab:imagenes-base}
+\end{table}
+
+La versión concreta de la imagen base del reconocimiento se fija desde fuera y no dentro del
+fichero de construcción, a propósito: cada combinación de tarjeta y controlador exige una
+distinta, y codificarla obligaría a editar el fichero en cada despliegue.
+
+\textbf{Qué implica que no estén publicadas.} Hoy, el centro necesita el repositorio del
+proyecto y una máquina capaz de construir, lo que incluye descargar las dependencias de
+compilación de la aplicación. Publicar las imágenes en un registro, por ejemplo el del propio
+alojamiento del código, reduciría el despliegue a descargar el descriptor y ejecutar
+\texttt{docker compose up}, sin repositorio ni construcción, y haría el primer arranque
+mucho más rápido y mucho menos sensible al equipo. Es una mejora de distribución evidente y
+queda como tarea pendiente, no como decisión: no se ha hecho porque el trabajo no ha llegado
+a la fase de distribuir el sistema a terceros.
+
+\subsection*{El caso de Windows}
+
+Merece tratamiento propio por una razón práctica: es, con diferencia, el sistema más
+extendido en los centros educativos españoles, de modo que despacharlo en una línea sería
+ignorar el escenario más probable. Conviene separar dos papeles que se confunden con
+facilidad.
+
+\textbf{Como cliente no hay nada que hacer.} Los equipos del alumnado, y cualquier pantalla
+del aula que solo muestre subtítulos, funcionan con Windows exactamente igual que con
+cualquier otro sistema: abren una dirección en el navegador. Este es el caso más frecuente
+en la práctica, y conviene decirlo explícitamente porque la advertencia siguiente puede
+leerse mal.
+
+\textbf{Como servidor no se ha probado, pero la vía existe.} El sistema no se ha desplegado
+sobre Windows en este trabajo, y por tanto no se afirma que funcione. Sí puede describirse
+con precisión qué haría falta, porque el obstáculo está localizado.
+
+El camino sería el subsistema Linux de Windows, que hoy permite acceso a la tarjeta gráfica
+desde dentro. Tanto la plataforma de NVIDIA \cite{microsoft2024cudawsl} como la de AMD
+\cite{amd2025rocmwsl} exponen la tarjeta a través de un dispositivo propio del subsistema,
+\texttt{/dev/dxg}, en lugar de los dispositivos que se usan en un Linux nativo. Y ahí está
+justamente el problema: \textbf{el perfil de AMD de este proyecto pasa al contenedor
+\texttt{/dev/kfd} y \texttt{/dev/dri}, que bajo el subsistema no existen}. Ese perfil
+requeriría por tanto modificarse. El de NVIDIA está mejor situado, porque no enumera
+dispositivos a mano sino que delega en el conjunto de herramientas del fabricante, que es
+precisamente el que se encarga de exponer el dispositivo correcto dentro del contenedor.
+
+Hay un segundo obstáculo, menor pero real: los contenedores comparten la red del anfitrión,
+decisión tomada por un problema concreto de la distribución de desarrollo
+(sección~\ref{sec:contenedores}). Ese modo se comporta de forma distinta en el entorno de
+Docker para Windows, así que habría que volver a publicar puertos, que es lo que se hace
+normalmente.
+
+Queda una tercera vía que conviene no perder de vista, porque puede ser la más simple:
+\textbf{ejecutar sin contenedores}. Los dos componentes del sistema son de por sí
+multiplataforma: la biblioteca de cálculo del servicio de reconocimiento tiene versión para
+Windows con tarjetas NVIDIA, y el entorno de ejecución de la aplicación es de Microsoft y
+nativo allí. Lo que no es multiplataforma es la automatización del proyecto, que asume un
+intérprete de órdenes de tipo Unix; habría que ejecutar los comandos a mano. Tampoco se ha
+probado.
+
+En resumen, y para que un centro sepa a qué atenerse: sobre Windows con tarjeta NVIDIA el
+despliegue es plausible y probablemente cercano, sobre Windows con tarjeta AMD exige
+modificar el descriptor, y en ambos casos habría que verificarlo antes de comprometerse.
+Queda recogido como tarea pendiente en lugar de como afirmación.
+
+\subsection*{El caso de Apple Silicon}
+
+Merece explicación aparte porque es contraintuitivo y porque un centro con equipamiento
+Apple lo encontrará de inmediato. Afecta a \textbf{toda la gama con chips de la serie M},
+tanto portátiles como equipos de sobremesa, porque lo que lo provoca es la arquitectura del
+procesador y no el formato del equipo.
+
+Conviene señalarlo porque los equipos de sobremesa de esa gama son, de hecho, candidatos
+razonables al papel de servidor de aula: son silenciosos, consumen poco y están pensados
+para permanecer encendidos, que es exactamente lo que este sistema necesita. Un centro que
+ya disponga de uno tiene una opción sensata, siempre que lo despliegue por la vía correcta.
+
+Y la vía correcta no es la que parecería. La aplicación funciona sin cambios en esa
+arquitectura, dentro o fuera de contenedor; el problema está en el servicio de
+reconocimiento.
+
+Ejecutado de forma nativa, el servicio detecta el acelerador integrado en el chip y lo
+emplea, con una particularidad que el código resuelve solo: fuerza precisión simple, porque
+Metal no implementa la precisión reducida para todas las operaciones del modelo y con ella
+la inferencia falla o devuelve silencio.
+
+Ejecutado en contenedor, en cambio, \textbf{queda en procesador y no hay forma de evitarlo}.
+La causa no es del sistema desarrollado: en macOS los contenedores corren dentro de una
+máquina virtual Linux que no expone el acelerador de Apple. Y quedarse en procesador
+significa 1,6 veces la velocidad del audio (sección~\ref{sec:hardware}), insuficiente para
+directo. De ahí que en estos equipos la vía correcta sea la nativa, aunque sea la menos
+cómoda.
+
+Queda una cosa por declarar, porque afecta a cuánta confianza merece esta recomendación:
+\textbf{el rendimiento de ese acelerador no se ha medido en este trabajo}. Se ha verificado
+que el servicio lo detecta y transcribe correctamente, pero el barrido de dispositivos
+comparó únicamente tarjeta gráfica dedicada y procesador (sección~\ref{sec:hardware}).
+Además, dentro de la propia gama el rendimiento varía mucho: no es comparable el chip de
+entrada de un portátil con las variantes de gama alta de un sobremesa, que multiplican el
+número de núcleos gráficos. Un centro que vaya a desplegar sobre este equipamiento debería
+medir el factor de tiempo real en su equipo concreto, con el mismo procedimiento del
+experimento, antes de comprometerse.
+
+\subsection*{Estado de verificación de cada vía}
+
+Por el mismo motivo se declara aquí, y no en una nota al pie, qué está probado y qué no:
+
+\begin{itemize}
+  \item \textbf{Vía nativa sobre Linux con tarjeta AMD:} es la empleada durante todo el
+        desarrollo y la que produjo las mediciones de esta memoria. Probada.
+  \item \textbf{Vía en contenedores sobre Linux con tarjeta AMD:} \textbf{construida y
+        ejecutada}. Los dos contenedores arrancan, superan su comprobación de salud y se
+        mantienen en servicio; las cifras de ocupación en disco de la
+        tabla~\ref{tab:disco} proceden de ese despliegue. Lo que no se ha hecho es una
+        sesión de aula completa a través de ellos.
+  \item \textbf{Vía en contenedores sobre Linux con tarjeta NVIDIA:} sin probar, por no
+        disponer de una tarjeta de ese fabricante. El descriptor está escrito y difiere del
+        anterior solo en la imagen base y en el mecanismo de acceso a la tarjeta.
+  \item \textbf{Vía nativa sobre Apple Silicon:} el servicio detecta el acelerador y
+        transcribe. Sin medición de rendimiento.
+  \item \textbf{Windows, en cualquier variante:} sin probar como servidor. Como cliente
+        funciona igual que cualquier otro sistema.
+\end{itemize}
+
+Este inventario es deliberado, y su nivel de detalle también. El
+capítulo~\ref{cap:desarrollo} documenta varios casos en los que algo funcionaba en
+apariencia y producía resultados falsos; dar por verificada una vía de despliegue que nadie
+ha ejecutado sería exactamente el mismo error, y darla por no verificada cuando sí se ha
+ejecutado tampoco ayuda a quien tenga que desplegarla.
+
+\section{Puesta en marcha}
+
+\subsection*{Paso 1: obtener el proyecto}
+
+Basta con el repositorio; no hay que descargar el modelo a mano, porque el contenedor lo
+hace en el primer arranque y lo conserva.
+
+\subsection*{Paso 2: configurar la clave del puesto docente}
+
+Se define en un fichero \texttt{.env} junto al descriptor de los contenedores:
+
+\begin{quote}\ttfamily
+CLAVE\_DOCENTE=la-clave-que-elija-el-centro
+\end{quote}
+
+\textbf{Este paso no es opcional, y el descriptor de contenedores lo impone.} Sin clave, la
+vista de emisión queda abierta y cualquier alumno conectado a la red podría tomarla y
+emitir por el aula. Durante un tiempo la variable tenía el valor vacío por defecto, de modo
+que seguir estos pasos sin definirla levantaba el sistema desprotegido sin ninguna
+advertencia; ahora el arranque se detiene y explica qué falta. La interfaz sigue avisando
+además cuando la aplicación corre sin clave, que es el modo de desarrollo.
+
+En el mismo fichero conviene fijar la política de reinicio:
+
+\begin{quote}\ttfamily
+REINICIO=unless-stopped
+\end{quote}
+
+Con ella, los contenedores vuelven a levantarse solos cuando arranca el equipo, que es lo
+que se quiere de un servidor de aula: tras un corte de luz o un reinicio nocturno, el
+sistema está disponible sin que nadie tenga que entrar a arrancarlo. El valor por defecto es
+el contrario, \texttt{no}, porque en un equipo de desarrollo unos contenedores que resucitan
+en cada encendido son una molestia, y el del reconocimiento además mantiene ocupado un
+núcleo y varios gigabytes de memoria mientras vive.
+
+Se emplea \texttt{unless-stopped} y no \texttt{always} por una diferencia que importa en un
+centro: si alguien detiene el sistema a propósito, debe seguir detenido hasta que se decida
+arrancarlo, y no reaparecer en el siguiente encendido.
+
+\subsection*{Paso 3: levantar el sistema}
+
+Un único comando, elegido según la tabla~\ref{tab:vias}:
+
+\begin{quote}\ttfamily
+make docker-amd \qquad\qquad\rmfamily(Linux, tarjetas AMD, plataforma ROCm)\\
+\ttfamily make docker-nvidia \qquad\rmfamily(Linux, tarjetas NVIDIA, plataforma CUDA)\\
+\ttfamily make demo \qquad\qquad\quad\rmfamily(macOS con Apple Silicon, ejecución nativa)
+\end{quote}
+
+Entre las dos primeras la diferencia es únicamente la imagen base del servicio de
+reconocimiento; el código es idéntico, porque la biblioteca de cálculo expone la misma
+interfaz sobre las dos plataformas. La tercera no usa contenedores por el motivo explicado
+en la sección~\ref{sec:contenedores}, y requiere tener preparado el entorno de Python y
+el de la aplicación en el propio equipo.
+
+\textbf{El primer arranque es lento y eso es normal.} Hay que descargar la imagen base, que
+en el caso de AMD son más de ochenta gigabytes (tabla~\ref{tab:disco}), descargar el modelo
+y compilar los núcleos de cálculo de la tarjeta. Todo ello queda guardado en volúmenes, de
+modo que los arranques siguientes son inmediatos. Conviene por tanto hacer el primer
+arranque con un día de margen sobre la primera clase, y con una conexión que aguante esa
+descarga.
+
+\subsection*{Paso 4: comprobar que funciona}
+
+El comando anterior imprime al arrancar las dos direcciones del sistema, recogidas en la
+tabla~\ref{tab:direcciones}. Son distintas y no son intercambiables:
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{|l|l|p{6.2cm}|}
+\hline
+\textbf{Quién} & \textbf{Dirección} & \textbf{Observación} \\
+\hline
+Docente & \texttt{http://localhost:5203/broadcast} &
+    Debe abrirse \textbf{en el propio equipo servidor}. \\
+\hline
+Alumnado & \texttt{http://<ip-del-equipo>:5203/view} &
+    Desde cualquier dispositivo de la misma red. \\
+\hline
+\end{tabular}
+\caption{Direcciones de acceso al sistema.}
+\label{tab:direcciones}
+\end{table}
+
+La restricción de la primera fila tiene una causa concreta y conviene entenderla antes de
+intentar sortearla: los navegadores solo conceden acceso al micrófono en conexiones seguras
+o en la máquina local. Como el sistema opera dentro de la red del centro y sin certificado,
+\textbf{la emisión tiene que hacerse desde el equipo servidor}. Si se quisiera emitir desde
+otro equipo del aula habría que servir la aplicación por HTTPS con un certificado
+reconocido por los dispositivos del centro, lo que es perfectamente posible pero excede lo
+que este trabajo despliega.
+
+\subsection*{Paso 5: dar clase}
+
+En la vista del docente: introducir la clave, pegar en el recuadro del glosario los términos
+de la sesión, uno por línea, y pulsar el botón de comenzar. Los subtítulos aparecen a la vez
+en la pantalla del docente y en la de todo el alumnado conectado.
+
+El glosario conviene tomarlo del temario o de las transparencias de la sesión. No hace falta
+que sea exhaustivo: sirve para que los términos propios de la asignatura se resalten
+visualmente en el subtítulo.
+
+\subsection*{Paso 6: detener el sistema}
+
+\begin{quote}\ttfamily
+make docker-parar
+\end{quote}
+
+Detiene los contenedores sin borrar el modelo descargado ni las cachés, de modo que el
+arranque siguiente vuelva a ser inmediato.
+
+\section{Incorporar el modelo adaptado}
+
+El resultado del ajuste fino se activa añadiendo una línea al mismo fichero \texttt{.env}:
+
+\begin{quote}\ttfamily
+ADAPTADOR=/adaptador
+\end{quote}
+
+No hay que reconstruir nada ni modificar la aplicación: el servicio de reconocimiento aplica
+el adaptador sobre el modelo base al cargarlo. Dejar la variable vacía sirve el modelo sin
+adaptar. Es la comprobación práctica de la frontera descrita en la
+sección~\ref{sec:integracion}.
+
+\section{Qué hacer si algo no funciona}
+
+Los tres fallos que se han observado en la práctica tienen la misma característica que los
+incidentes del capítulo~\ref{cap:desarrollo}: el sistema no se cae, simplemente funciona
+peor sin decirlo.
+
+\textbf{Los subtítulos tardan mucho y llegan en bloques largos.} Mirar el contador de la
+vista del docente que separa los cortes cerrados \emph{por pausa} de los cerrados \emph{por
+agotar el tope}. Si dominan los segundos, el detector de silencios no está encontrando las
+pausas. La causa habitual no está en el sistema sino en el navegador: el control automático
+de ganancia amplifica el ruido de fondo cuando el hablante calla, y la energía nunca baja lo
+suficiente. La aplicación lo desactiva al capturar; si aun así ocurre, revisar que no haya
+un procesado de audio activo en el sistema operativo o en el propio micrófono.
+
+\textbf{Aparecen frases que nadie ha dicho.} El sistema filtra los dos patrones
+reconocibles, las muletillas de subtítulos de vídeo y los bucles de repetición, pero no
+puede filtrar una alucinación verosímil (sección~\ref{sec:filtro}). Si son frecuentes, casi
+siempre indica que al micrófono le llega poca voz y mucho fondo: acercarlo al docente antes
+que tocar ninguna configuración.
+
+\textbf{La calidad cae de golpe a mitad de clase.} La degradación frente al ruido no es
+gradual: el sistema pasa de funcionar bien a fallar en un margen de cinco decibelios
+(sección~\ref{sec:ruido}). Si el aula se ha animado, el remedio es el micrófono de
+proximidad, no un ajuste del software.
+
+\textbf{El contenedor de reconocimiento no arranca con tarjeta AMD.} Casi siempre son los
+identificadores de los grupos \texttt{video} y \texttt{render}, que varían entre equipos y
+están fijados numéricamente en el descriptor. Se consultan con
+\texttt{getent group video render} y se ajustan.
+
+\section{Arranque sin contenedores}
+
+Los dos atajos que se emplearon durante el desarrollo sirven también para desplegar, y son
+la vía obligada en macOS:
+
+\begin{quote}\ttfamily
+make app \qquad\rmfamily arranca solo la aplicación, con un motor de reconocimiento
+simulado\\
+\ttfamily make demo \qquad\rmfamily arranca el servicio de reconocimiento real y la
+aplicación, y limpia al salir\\
+\ttfamily make demo-lora \quad\rmfamily igual, pero sirviendo el modelo adaptado
+\end{quote}
+
+El primero merece atención porque resuelve un problema práctico de despliegue: permite
+comprobar que la red del aula, los dispositivos del alumnado y las direcciones de acceso
+funcionan \emph{antes} de que entre en juego el reconocimiento. Si los subtítulos simulados
+llegan a los móviles de la clase y los reales no, el problema está en el servicio de
+reconocimiento; si no llegan ni los simulados, está en la red. Separar esas dos causas
+ahorra la mayor parte del tiempo de diagnóstico.
