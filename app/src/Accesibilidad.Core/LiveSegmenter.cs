@@ -3,8 +3,17 @@ namespace Accesibilidad.Core;
 /// <summary>Ajustes del segmentador. Los valores por defecto vienen de exp-102.</summary>
 public sealed class SegmentationOptions
 {
-    /// <summary>Duración máxima antes de cortar por la fuerza. Acota el peor caso.</summary>
-    public double MaxSeconds { get; set; } = 6.0;
+    /// <summary>
+    /// Duración máxima antes de cortar por la fuerza. Acota el peor caso.
+    /// <para>
+    /// 8 s es el tope de la fila ganadora de exp-102 (WER 12.48%, duración media 2.93 s,
+    /// p95 5.92 s), y son esas las cifras de latencia que reporta la memoria. Conviene no
+    /// leerlo como «los segmentos duran 8 s»: con corte por pausas el tope casi nunca se
+    /// alcanza, de ahí que la media se quede en 2.9 s. Bajarlo a 5 s acorta el peor caso
+    /// pero empeora el WER hasta 14.53%, también medido.
+    /// </para>
+    /// </summary>
+    public double MaxSeconds { get; set; } = 8.0;
 
     /// <summary>Duración mínima: por debajo, el modelo se queda sin contexto acústico.</summary>
     public double MinSeconds { get; set; } = 1.5;
@@ -24,8 +33,8 @@ public sealed class SegmentationOptions
     /// Fracción del nivel de voz por debajo de la cual se considera silencio.
     /// <para>
     /// El umbral se define respecto a la MEDIANA de las energías recientes, que durante
-    /// el habla es el nivel de la voz. Definirlo respecto al percentil 25 —como hace la
-    /// versión offline, donde la grabación entera sí contiene pausas— falla en vivo: si
+    /// el habla es el nivel de la voz. Definirlo respecto al percentil 25, como hace la
+    /// versión offline donde la grabación entera sí contiene pausas, falla en vivo: si
     /// el hablante lleva unos segundos sin parar, el percentil 25 ya es voz y el sistema
     /// se cree en silencio permanente. Detectado por las pruebas.
     /// </para>
@@ -87,7 +96,7 @@ public sealed class LiveSegmenter(int frecuencia, SegmentationOptions? opciones 
     /// <summary>
     /// Segmentos cerrados por agotar el tope de duración. Si domina esta cifra, el
     /// detector de silencios NO está funcionando y el sistema se comporta como si
-    /// troceara por reloj — que es justo lo que exp-102 midió como peor opción.
+    /// troceara por reloj, que es justo lo que exp-102 midió como peor opción.
     /// </summary>
     public int CutsByTimeout { get; private set; }
 
@@ -119,16 +128,64 @@ public sealed class LiveSegmenter(int frecuencia, SegmentationOptions? opciones 
         var silencioSuficiente = _tramasSilencioSeguidas * MsPorTrama / 1000.0
                                  >= _op.MinSilenceSeconds;
 
-        if (BufferedSeconds >= _op.MaxSeconds ||
-            (silencioSuficiente && BufferedSeconds >= _op.MinSeconds))
-        {
-            return Cortar();
-        }
+        // El orden importa: se comprueba la pausa ANTES que el tope, porque cuando el
+        // segmento llega al tope justo durante un silencio el corte es por pausa, y
+        // contarlo como tope falsearía el diagnóstico en el sentido más confuso posible.
+        if (silencioSuficiente && BufferedSeconds >= _op.MinSeconds)
+            return CortarSiHayVoz(porPausa: true);
+        if (BufferedSeconds >= _op.MaxSeconds)
+            return CortarSiHayVoz(porPausa: false);
         return null;
     }
 
-    /// <summary>Devuelve lo que quede pendiente. Para no perder el final de una intervención.</summary>
-    public byte[]? Flush() => _acumulado.Count > 0 ? Cortar() : null;
+    /// <summary>
+    /// Devuelve lo que quede pendiente. Para no perder el final de una intervención.
+    /// No cuenta como corte: lo provoca que se pare la captura, no el criterio de corte.
+    /// </summary>
+    public byte[]? Flush() => _acumulado.Count > 0 ? CortarSiHayVoz(porPausa: null) : null;
+
+    /// <summary>
+    /// Cierra el segmento, pero lo descarta si apenas contiene voz.
+    ///
+    /// <para>Es la PRIMERA barrera contra las alucinaciones, y actúa antes de gastar una
+    /// inferencia: sobre silencio, el modelo emite las frases más frecuentes de su
+    /// entrenamiento en lugar de callar. La segunda barrera, ya sobre el texto devuelto,
+    /// es <see cref="HallucinationFilter"/>.</para>
+    ///
+    /// <para>El audio se descarta en cualquier caso: dejarlo en el búfer haría que el
+    /// siguiente segmento arrastrase el silencio y volviera a dispararse el tope.</para>
+    ///
+    /// <para>Un descarte NO suma al reparto entre pausa y tope. Ese reparto existe para
+    /// saber si el detector de silencios funciona sobre el habla del docente, y una pausa
+    /// larga produce un corte cada <see cref="SegmentationOptions.MinSeconds"/>: contarlos
+    /// dejaría el diagnóstico en «casi todo por pausa» precisamente cuando nadie habla,
+    /// que es la lectura contraria a la que debe dar.</para>
+    /// </summary>
+    /// <param name="porPausa">
+    /// <c>true</c> si cierra una pausa, <c>false</c> si cierra el tope, <c>null</c> si es
+    /// el vaciado final, que no responde a ningún criterio de corte.
+    /// </param>
+    private byte[]? CortarSiHayVoz(bool? porPausa)
+    {
+        var proporcionVoz = _tramasTotales > 0
+            ? (double)_tramasConVoz / _tramasTotales
+            : 0.0;
+        // Sin historial suficiente el umbral es 0 y NADA se marca como silencio, de modo
+        // que la proporción sale 1 y el segmento pasa. Es el comportamiento seguro al
+        // arrancar: ante la duda, transcribir.
+        var mudo = _tramasTotales > 0 && proporcionVoz < ProporcionVozMinima;
+
+        var segmento = Cortar();
+        if (mudo)
+        {
+            DiscardedAsSilence++;
+            return null;
+        }
+
+        if (porPausa is true) CutsBySilence++;
+        else if (porPausa is false) CutsByTimeout++;
+        return segmento;
+    }
 
     private byte[] Cortar()
     {

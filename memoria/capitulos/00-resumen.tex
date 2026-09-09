@@ -1,17 +1,17 @@
 \chapter{Resumen}
 
-El alumnado con discapacidad auditiva depende de que alguien transcriba lo que se dice en
-clase. Este trabajo evalúa si las técnicas habituales de adaptación de modelos de
-reconocimiento automático del habla mejoran esa transcripción en español, y desarrolla una
-aplicación de subtitulado en vivo desplegable en la red de un centro. Se comparan tres
-técnicas sobre Whisper con diseño pareado, intervalos de confianza por remuestreo y test de
-signos: prompting contextual, post-corrección con un modelo de lenguaje local y ajuste fino
-con LoRA. Solo la última mejora de forma concluyente, con 1,23 puntos de reducción del
-error de palabra; la post-corrección lo empeora. El resultado principal es otro: segmentar
-el audio por silencios en lugar de por reloj reduce el error 7,4 puntos a igual latencia,
-seis veces más que la mejor técnica de adaptación. Se muestra además que el WER agregado
-oculta los fallos que importan en accesibilidad, y se propone una métrica complementaria
-que los expone.
+Quien no puede oír la clase, o aún no domina su lengua, depende de que alguien la
+transcriba. Este trabajo evalúa si las técnicas habituales de adaptación al dominio mejoran
+el reconocimiento automático del habla en español, y desarrolla una aplicación de
+subtitulado en vivo desplegable en un centro. Se comparan tres técnicas sobre Whisper con
+diseño pareado, bootstrap y test de signos: prompting contextual, post-corrección con un
+modelo de lenguaje local y ajuste fino con LoRA. Solo la última mejora de forma
+concluyente, 1,23 puntos de error de palabra; la post-corrección empeora. El resultado
+principal es otro: segmentar el audio por silencios en lugar de por reloj reduce el error
+7,4 puntos a igual latencia, bajo el mismo criterio estadístico y seis veces más que la
+mejor técnica de adaptación. Se muestra
+además que el error agregado oculta los fallos que importan en accesibilidad, y se proponen
+métricas que los exponen.
 
 \vspace{0.5cm}
 \noindent\textbf{Palabras clave:} accesibilidad educativa; reconocimiento automático del
@@ -19,17 +19,17 @@ habla; adaptación al dominio; subtitulado en tiempo real; evaluación de sistem
 
 \chapter{Abstract}
 
-Students with hearing impairment depend on someone transcribing what is said in class.
-This work evaluates whether the usual domain adaptation techniques for automatic speech
-recognition improve that transcription in Spanish, and develops a live captioning
-application deployable on a school network. Three techniques are compared on Whisper using
-a paired design, bootstrap confidence intervals and sign tests: contextual prompting,
-post-correction with a local language model, and LoRA fine tuning. Only the last one
+Students who cannot hear the lecture, or do not yet master its language, depend on someone
+transcribing what is said. This work evaluates whether the usual domain adaptation
+techniques for automatic speech recognition improve that transcription in Spanish, and
+develops a live captioning application deployable on a school network. Three techniques are
+compared on Whisper using a paired design, bootstrap confidence intervals and sign tests:
+contextual prompting, post-correction with a local language model, and LoRA fine tuning. Only the last one
 improves conclusively, reducing word error rate by 1.23 points; post-correction makes it
 worse. The main finding lies elsewhere: segmenting audio at silences rather than at fixed
 intervals reduces error by 7.4 points at equal latency, six times more than the best
-adaptation technique. The work also shows that aggregate WER hides the failures that
-matter for accessibility, and proposes a complementary metric that exposes them.
+adaptation technique. The work also shows that aggregate word error rate hides the failures
+that matter for accessibility, and proposes complementary metrics that expose them.
 
 \vspace{0.5cm}
 \noindent\textbf{Keywords:} educational accessibility; automatic speech recognition;

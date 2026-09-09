@@ -126,7 +126,7 @@ precisamente el más peligroso para el usuario final.
 
 Es el primer resultado **concluyente** de la comparativa, y es negativo. Eso no lo hace
 menos valioso: un resultado negativo bien medido, con mecanismo explicado y con las
-salvaguardas documentadas, es una contribución legítima — sobre todo cuando la intuición
+salvaguardas documentadas, es una contribución legítima; sobre todo cuando la intuición
 del campo diría lo contrario.
 
 ## Qué probar antes de descartarla del todo

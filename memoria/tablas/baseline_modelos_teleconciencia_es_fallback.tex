@@ -2,18 +2,22 @@
 % No editar a mano: los cambios se pierden en la siguiente regeneracion.
 \begin{table}[h]
 \centering
-\begin{tabular}{|l|r|r|r|r|r|}
+\small
+\setlength{\tabcolsep}{4pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|r|r|r|r|r|r|}
     \hline
-    \textbf{Modelo} & \textbf{Par.\ (M)} & \textbf{WER (\%)} &
+    \textbf{Modelo} & \textbf{Par.\ (M)} & \textbf{Clips} & \textbf{WER (\%)} &
     \textbf{CER (\%)} & \textbf{RTF} & \textbf{$\times$ tiempo real} \\
     \hline
-    \texttt{whisper-small} & 242 & 23.42 & 8.88 & 0.058 & 17.2 \\
-    \texttt{whisper-medium} & 764 & 22.65 & 8.96 & 0.146 & 6.9 \\
-    \texttt{whisper-large-v3-turbo} & 809 & 22.26 & 8.56 & 0.085 & 11.8 \\
+    \texttt{whisper-small} & 242 & 40 & 23.42 & 8.88 & 0.058 & 17.2 \\
+    \texttt{whisper-medium} & 764 & 1200 & 18.61 & 8.54 & 0.051 & 19.8 \\
+    \texttt{whisper-large-v3-turbo} & 809 & 40 & 22.26 & 8.56 & 0.085 & 11.8 \\
     \hline
-\end{tabular}
-\caption{Rendimiento de los modelos Whisper sin adaptar sobre 40 fragmentos
-(5.5 minutos de audio). Normalizacion \texttt{basico}.
-RTF: factor de tiempo real (menor es mejor).}
-\label{tab:baseline-modelos}
+\end{tabular}}
+\caption{Rendimiento de los modelos Whisper sin adaptar sobre
+\texttt{teleconciencia-es} (5.5 minutos de audio en la muestra de
+referencia). Normalización \texttt{basico}. RTF: factor de tiempo real (menor es
+mejor). \textbf{Atención:} las filas no comparten muestra, de modo que sus tasas de error no son comparables entre sí; ver la columna \emph{Clips}.}
+\label{tab:baseline-modelos-teleconciencia-es}
 \end{table}

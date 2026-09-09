@@ -5,15 +5,21 @@
 # La única diferencia entre ambas variantes es la imagen base: el código del servicio es
 # idéntico porque PyTorch expone la misma interfaz sobre CUDA y sobre ROCm.
 #
-#   AMD     docker build --build-arg BASE=rocm/pytorch:latest        -f docker/asr.Dockerfile .
+#   AMD     docker build -f docker/asr.Dockerfile .          (usa el BASE anclado por defecto)
 #   NVIDIA  docker build --build-arg BASE=pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime \
 #                        -f docker/asr.Dockerfile .
 #
 # La versión concreta de la imagen base se fija fuera y no aquí a propósito: cada
 # combinación de tarjeta y controlador exige una, y codificarla obligaría a editar el
 # fichero en cada despliegue.
+#
+# El valor por defecto SÍ va anclado, y no a «latest». Una imagen publicada cuya base se
+# mueve sola deja de ser reproducible: dos construcciones del mismo commit dan artefactos
+# distintos, que es el mismo fallo que este trabajo persigue en los resultados
+# experimentales. Quien necesite otra versión la pasa por --build-arg, que es justo para
+# lo que está el argumento.
 
-ARG BASE=rocm/pytorch:latest
+ARG BASE=rocm/pytorch:rocm6.4.1_ubuntu24.04_py3.12_pytorch_release_2.6.0
 FROM ${BASE}
 
 LABEL org.opencontainers.image.title="TFM ASR" \

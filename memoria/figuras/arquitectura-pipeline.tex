@@ -1,0 +1,67 @@
+% Recorrido de un segmento de audio, desde el microfono hasta la pantalla del alumnado.
+%
+% El valor de esta figura no es enumerar componentes sino mostrar DONDE aterriza cada
+% decision medida: la columna derecha ata cada etapa al experimento o al incidente que la
+% fijo. Sin esa columna seria un diagrama de cajas mas.
+%
+% La separacion vertical la manda la ALTURA DE LAS NOTAS, no la de las cajas: con el
+% espaciado ajustado a las cajas, las notas de la derecha se pisan unas a otras.
+\begin{figure}[!ht]
+\centering
+\begin{tikzpicture}[
+    font=\footnotesize,
+    etapa/.style   = {draw, rounded corners=2pt, align=center, fill=white,
+                      minimum height=7mm, text width=38mm, inner ysep=2pt},
+    modelo/.style  = {etapa, fill=black!8, font=\footnotesize\bfseries},
+    flecha/.style  = {-{Stealth[length=2mm]}, thick},
+    porque/.style  = {align=left, font=\scriptsize, text width=54mm, text=black!72,
+                      inner ysep=0pt},
+    node distance  = 11mm,
+]
+
+% ---------------- cadena principal ----------------
+\node[etapa] (cap) {Captura en el navegador};
+\node[etapa, below=of cap]  (seg) {Segmentación por silencios};
+\node[modelo, below=of seg] (asr) {Whisper \texttt{medium} $+$ adaptador};
+\node[etapa, below=of asr]  (fus) {Fusión del solape};
+\node[etapa, below=of fus]  (alu) {Filtro de alucinaciones};
+\node[etapa, below=of alu]  (glo) {Resaltado del glosario};
+\node[etapa, below=of glo]  (ses) {Difusión a la clase};
+
+\foreach \a/\b in {cap/seg, seg/asr, asr/fus, fus/alu, alu/glo, glo/ses}
+    \draw[flecha] (\a) -- (\b);
+
+% ---------------- frontera entre nucleos ----------------
+% Se dibuja explicitamente porque es la decision estructural del trabajo: la aplicacion
+% depende del contrato, nunca de la implementacion que hay detras. La etiqueta va a la
+% IZQUIERDA, que es donde no compite con las notas.
+\coordinate (fy) at ($(seg.south)!0.5!(asr.north)$);
+\draw[dashed, black!55] ($(fy)+(-30mm,0)$) -- ($(fy)+(30mm,0)$);
+\node[left, font=\scriptsize\itshape, text=black!55, align=right, text width=22mm]
+      at ($(fy)+(-30mm,0)$) {contrato\\\texttt{IAsrEngine}};
+
+% ---------------- por que cada etapa es como es ----------------
+\node[porque, right=6mm of cap.east, anchor=west] {%
+    Ganancia automática \textbf{desactivada}: con ella la energía nunca baja y la
+    segmentación deja de funcionar.};
+\node[porque, right=6mm of seg.east, anchor=west] {%
+    Cortar en pausas y no por reloj: $-7{,}4$ puntos a igual latencia (exp-102).};
+\node[porque, right=6mm of asr.east, anchor=west] {%
+    Elegido por su \emph{modo de fallo}, no por su tasa de error (exp-000, exp-004). El
+    adaptador es la técnica ganadora (exp-003).};
+\node[porque, right=6mm of fus.east, anchor=west] {%
+    Sin ella el solape duplicaba texto y el error superaba el 100\,\% (exp-100).};
+\node[porque, right=6mm of alu.east, anchor=west] {%
+    Caza muletillas y bucles, \textbf{no} la alucinación verosímil: reduce el riesgo, no lo
+    elimina.};
+\node[porque, right=6mm of glo.east, anchor=west] {%
+    Decorador sobre el motor, para no contaminar la comparativa.};
+\node[porque, right=6mm of ses.east, anchor=west] {%
+    Una transcripción para toda el aula, sea cual sea el número de dispositivos.};
+
+\end{tikzpicture}
+\caption{Recorrido de un segmento de audio y origen de cada decisión de diseño. La columna
+derecha indica qué experimento o qué incidente fijó cada etapa; ninguna se eligió por
+convención.}
+\label{fig:pipeline}
+\end{figure}

@@ -11,6 +11,10 @@ directamente de ellos.
 
 \subsection{Funcionales}
 
+Los requisitos funcionales, recogidos en la tabla~\ref{tab:rf}, describen lo que el sistema
+debe hacer desde el punto de vista de quien lo usa: el docente que emite y el alumnado que
+lee.
+
 \begin{table}[h]
 \centering
 \small
@@ -46,7 +50,19 @@ El requisito RF6 no es un detalle de comodidad. El sistema se dirige a personas 
 discapacidad sensorial, y no cabe suponer que quien lo desarrolla pueda fijar un tamaño de
 texto adecuado para todas ellas ni para todas las distancias de lectura de un aula.
 
+RF3 tiene una justificación menos evidente y más importante de lo que aparenta. La
+población que se beneficia de un subtítulo de aula es mayor que el colectivo que lo motiva:
+incluye al alumnado que aún no domina la lengua de la clase, con evidencia empírica detrás
+(sección~\ref{sec:para-quien}). Un recurso que hubiera que solicitar, instalar o activar
+excluiría por diseño a casi toda esa población, y obligaría a identificarse a quien
+prefiriera no hacerlo. De ahí que el requisito no sea «que sea fácil de usar» sino que no
+haya nada que hacer: abrir una dirección.
+
 \subsection{No funcionales}
+
+Los de la tabla~\ref{tab:rnf} no describen funciones sino condiciones bajo las cuales las
+anteriores son útiles: de poco sirve transcribir bien si el subtítulo llega tarde, si el
+sistema necesita una unidad de cálculo por alumno o si el audio del aula sale del centro.
 
 \begin{table}[h]
 \centering
@@ -89,11 +105,58 @@ que se necesita ``un micrófono adecuado'' no es verificable. La caracterizació
 experimental frente al ruido permite sustituirlo por una condición comprobable sobre la
 relación señal-ruido, y con ella justificar la elección del equipo de captación.
 
+\subsection{Legales y de protección de datos}
+\label{sec:requisitos-legales}
+
+Un sistema que capta la voz de un aula y la difunde por una red trata datos personales, y
+frecuentemente de menores. Los requisitos que se derivan de ello no son una formalidad
+añadida al final: dos de los recogidos en la tabla~\ref{tab:rl} determinaron decisiones
+de arquitectura.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|c|p{11cm}|}
+\hline
+\textbf{Id} & \textbf{Requisito} \\
+\hline
+RL1 & La voz captada no abandona la red del centro ni se envía a ningún servicio de
+      terceros. El reconocimiento se ejecuta en un equipo del propio centro. \\
+\hline
+RL2 & El sistema no almacena el audio. La transcripción vive en memoria mientras dura la
+      sesión y se descarta al terminarla. \\
+\hline
+RL3 & La restricción de alcance la impone la aplicación, no la configuración de red del
+      centro, de modo que sea verificable y no dependa de una suposición. \\
+\hline
+RL4 & El material empleado en la comparativa procede de corpus con licencia de uso para
+      investigación; no se grabaron clases reales, y por tanto no se recabaron
+      consentimientos ni se trataron datos de alumnado identificable. \\
+\hline
+\end{tabular}
+\caption{Requisitos legales y de protección de datos.}
+\label{tab:rl}
+\end{table}
+
+RL1 es la razón de que el reconocimiento se ejecute en local en lugar de delegarse en un
+servicio comercial en la nube, que habría sido más sencillo y probablemente más preciso.
+Enviar audio de aula a un tercero exigiría una base jurídica y un contrato de encargo de
+tratamiento \cite{ue2016rgpd} que quedan fuera de lo que un centro puede resolver por su
+cuenta para una asignatura. Ejecutarlo en local convierte un problema de cumplimiento en un
+problema de ingeniería, que es la razón de fondo de la restricción de recursos que atraviesa
+todo el trabajo.
+
+RL4 delimita el alcance ético de la parte experimental: al no grabarse material propio, no
+hubo tratamiento de datos personales que requiriera consentimiento informado ni evaluación
+ética. La continuación prevista en el capítulo~\ref{cap:conclusiones} es repetir la
+comparativa sobre clases reales; si llega a ejecutarse, ese punto deja de ser trivial y debe
+resolverse antes de grabar, no después.
+
 \section{Requisitos del procedimiento experimental}
 
-Estos requisitos no proceden del usuario sino de la naturaleza de la pregunta que el
-trabajo pretende responder. Se enuncian porque su incumplimiento no produce un fallo
-visible: produce cifras verosímiles y falsas.
+Estos requisitos, listados en la tabla~\ref{tab:re}, no proceden del usuario sino de la
+naturaleza de la pregunta que el trabajo pretende responder. Se enuncian porque su
+incumplimiento no produce un fallo visible: produce cifras verosímiles y falsas.
 
 \begin{table}[h]
 \centering
@@ -137,3 +200,65 @@ determinados corpus correspondía en realidad a defectos de la transcripción de
 
 RE7 es una consecuencia práctica de RE1: una cifra copiada a mano deja de estar vinculada a
 la ejecución que la produjo en el momento en que se copia.
+
+\section{Trazabilidad de los requisitos}
+\label{sec:trazabilidad-requisitos}
+
+Enunciar requisitos sin cerrarlos deja al lector sin forma de comprobar si se cumplieron.
+La tabla~\ref{tab:trazabilidad} los vincula con el mecanismo concreto que los satisface y
+con la evidencia que lo demuestra; el capítulo~\ref{cap:desarrollo} desarrolla cada uno y el
+capítulo~\ref{cap:conclusiones} verifica los objetivos que de ellos se derivan.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|c|p{5.3cm}|p{5.3cm}|}
+\hline
+\textbf{Id} & \textbf{Dónde se resuelve} & \textbf{Cómo se comprueba} \\
+\hline
+RF1 & Segmentador en vivo y servicio de reconocimiento & Demostración funcional; sesión con
+      micrófono real \\
+\hline
+RF2 & Sesión de subtitulado compartida, difusión por websocket & Pruebas automáticas de la
+      sesión; varios clientes simultáneos \\
+\hline
+RF3 & Vista de alumnado sin captura ni permisos & Abrir la dirección en un navegador sin
+      instalar nada \\
+\hline
+RF4 & Decorador de resaltado sobre el motor de reconocimiento & Pruebas del glosario,
+      incluida la protección de la eñe \\
+\hline
+RF5 & Histórico retenido en la sesión y enviado al conectar & Prueba automática de
+      incorporación tardía \\
+\hline
+RF6 & Control de tamaño de texto en la vista del alumnado & Verificación manual en la
+      interfaz \\
+\hline
+RF7 & Instrumentación de latencia de extremo a extremo en el navegador & Panel de la vista
+      de emisión (sección~\ref{sec:latencia}) \\
+\hline
+RNF1 & Segmentación por pausas con tope de duración & exp-100 y exp-102; medición del
+       circuito completo \\
+\hline
+RNF2 & Reconocimiento único en el servidor para toda el aula & Arquitectura; coste
+       independiente del número de clientes \\
+\hline
+RNF3 & Filtro de red privada en la propia aplicación & Pruebas automáticas del filtro \\
+\hline
+RNF4 & Clave compartida en el puesto de emisión & Pruebas automáticas de acceso \\
+\hline
+RNF5 & Modelo de tamaño medio sobre una GPU de consumo & exp-000 y exp-101 \\
+\hline
+RNF6 & Curva de degradación frente al ruido & exp-104: requisito expresado en dB \\
+\hline
+RL1--RL3 & Ejecución local, sin persistencia de audio, filtro de red privada & Pruebas
+       automáticas y revisión de la configuración de despliegue \\
+\hline
+RE1--RE7 & Registro de procedencia y generación automática de tablas y figuras &
+       Apéndice~\ref{ap:reproducibilidad} \\
+\hline
+\end{tabular}
+\caption{Trazabilidad de requisitos: dónde se resuelve cada uno y con qué evidencia.}
+\label{tab:trazabilidad}
+\end{table}

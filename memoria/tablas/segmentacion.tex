@@ -1,0 +1,32 @@
+% GENERADO AUTOMATICAMENTE por research/eval/report/tabla_segmentacion.py
+% No editar a mano.
+\begin{table}[h]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|r|r|r|r|r|}
+    \hline
+    \textbf{Estrategia} & \textbf{Tope (s)} & \textbf{WER (\%)} &
+    \textbf{Dur. media (s)} & \textbf{Dur. p95 (s)} & \textbf{Segmentos} \\
+    \hline
+    Ventana fija & 2 & 23.19 & 1.87 & 2.00 & 277 \\
+    Silencios & 2 & \textbf{20.87} & 1.69 & 2.00 & 306 \\
+    \hline
+    Ventana fija & 3 & 19.85 & 2.68 & 3.00 & 193 \\
+    Silencios & 3 & \textbf{17.33} & 2.22 & 3.00 & 232 \\
+    \hline
+    Ventana fija & 5 & 17.12 & 4.27 & 5.00 & 121 \\
+    Silencios & 5 & \textbf{14.53} & 2.78 & 5.00 & 186 \\
+    \hline
+    Ventana fija & 8 & 13.92 & 6.30 & 8.00 & 82 \\
+    Silencios & 8 & \textbf{12.48} & 2.93 & 5.92 & 176 \\
+    \hline
+    Sin trocear (techo) & --- & 10.44 & --- & --- & 40 \\
+    \hline
+\end{tabular}}
+\caption{Segmentación por silencios frente a troceado por reloj, con el mismo tope de
+duración en cada par para que la comparación no mida simplemente la longitud del
+segmento. A latencia media equivalente (2.68 frente a 2.93~s), la segmentación por silencios reduce el error 7.37 puntos, a costa de que el percentil 95 pase de 3.00 a 5.92~s. Ese contraste se somete al mismo doble criterio que las técnicas de adaptación, sobre los mismos fragmentos: intervalo de confianza al 95\% de [-9.76, -5.04] puntos por remuestreo de clips, y 30 fragmentos que mejoran frente a 2 que empeoran en el test de signos ($p=2.5e-07$).}
+\label{tab:vad}
+\end{table}

@@ -1,4 +1,5 @@
 \chapter{Reproducibilidad}
+\label{ap:reproducibilidad}
 
 Este apéndice recoge lo necesario para reproducir cualquier cifra de la memoria. No es
 documentación de instalación: es la respuesta a la pregunta de si los resultados
@@ -10,7 +11,10 @@ Los experimentos se ejecutaron sobre una tarjeta gráfica AMD con la pila de có
 en un sistema Linux. Esta elección tiene una consecuencia que conviene declarar: parte del
 software habitual del campo asume tarjetas de otro fabricante, y algunas implementaciones
 optimizadas para inferencia no estaban disponibles. La comparativa se realizó por tanto
-sobre la implementación de referencia, más lenta pero disponible en ambas plataformas.
+sobre la implementación de referencia de la biblioteca \emph{Transformers}
+\cite{wolf2020transformers}, más lenta que las alternativas especializadas pero disponible
+por igual en ambas plataformas, lo que evita que la elección de hardware se confunda con una
+diferencia de resultados.
 
 El intérprete de Python se creó reutilizando los paquetes del sistema de forma deliberada,
 porque reinstalar la biblioteca de cálculo dentro del entorno aislado rompe el soporte de
@@ -18,14 +22,16 @@ la tarjeta gráfica. Es un detalle menor que causa horas de depuración si se de
 
 \section{Trazabilidad de los resultados}
 
-Cada ejecución produce un fichero de resultados que registra, junto a las métricas:
+El procedimiento actual hace que cada ejecución produzca un fichero de resultados que
+registra, junto a las métricas:
 
 \begin{itemize}
   \item El identificador del commit del código que la produjo.
   \item Si el árbol de trabajo tenía cambios sin confirmar en ese momento, lo que indica
         que el commit registrado no basta para reconstruir el estado exacto.
   \item El resumen criptográfico del manifiesto de corpus empleado, junto con su número de
-        fragmentos.
+        fragmentos, y el de la submuestra efectiva cuando el experimento evalúa solo una
+        parte de él.
   \item La configuración completa: modelo, estrategia de decodificación, semilla,
         parámetros del experimento y versiones de las bibliotecas relevantes.
 \end{itemize}
@@ -35,6 +41,77 @@ manifiesto, y los resultados anteriores quedaron apuntando a un fichero cuyo con
 era distinto sin que nada lo advirtiera. El resumen criptográfico permite detectar esa
 discrepancia; posteriormente se añadió también la posibilidad de que varias muestras de la
 misma fuente coexistan, que la previene.
+
+\subsection*{Hasta dónde llega, en la práctica}
+
+Decir «cada ejecución registra» describe el procedimiento, no el archivo: el mecanismo
+nació de aquel incidente, de modo que alcanza en distinto grado a lo ejecutado antes y
+después. Conviene dar las cifras, porque presentar la trazabilidad como una propiedad
+uniforme sería justamente el tipo de afirmación de la que este trabajo dedica un capítulo a
+desconfiar. Sobre los cincuenta y dos ficheros de resultados que sostienen esta memoria:
+
+\begin{itemize}
+  \item Todos registran su configuración completa, que es lo que permite repetir la
+        ejecución, y todos registran un identificador de commit.
+  \item En cuarenta y cuatro ese identificador vale \texttt{sin-git}, porque se produjeron
+        antes de que el trabajo estuviera bajo control de versiones. Son los más antiguos,
+        y entre ellos está el barrido de línea base.
+  \item Once registran el resumen criptográfico del manifiesto, que es la parte que se
+        añadió tras el incidente. En los once, recalcularlo hoy devuelve el valor que el
+        fichero declara.
+  \item Uno solo se produjo con el árbol de trabajo limpio. El resto de los que lo declaran
+        tenían cambios sin confirmar, cosa que el propio bloque advierte y que significa
+        que el commit registrado no basta para reconstruir el estado exacto.
+\end{itemize}
+
+El programa \texttt{tools/auditar\_resultados.py} recorre el archivo entero y falla si algo
+no cuadra. Aplica dos comprobaciones, según lo que cada fichero permita.
+
+La directa consiste en \emph{recalcular} el resumen criptográfico del manifiesto y
+compararlo con el que el resultado declara. Merece subrayarse por lo que tiene de lección
+repetida: guardar el resumen no detecta nada por sí solo, y durante un tiempo nadie lo
+recalculó, de modo que la salvaguarda contra el incidente era exactamente la misma clase de
+fallo que este trabajo documenta en otros sitios, un dato declarado que ninguna
+comprobación consulta. Cuando el experimento evalúa solo una parte del manifiesto se
+compara además el resumen de esa submuestra, porque el del fichero completo identifica
+material que no se ha medido.
+
+La indirecta cubre a los resultados anteriores al mecanismo, que no llevan resumen: el
+número de fragmentos y de palabras de referencia que declara cada fichero tiene que
+coincidir con el que produce el manifiesto de hoy. Hoy señala cinco ficheros, y son
+precisamente los del incidente: mediciones sobre cuarenta fragmentos de un corpus que
+después se amplió a mil doscientos. Ese es el motivo de que la
+tabla~\ref{tab:baseline-corpus} marque esa fila, y de que las comparaciones entre modelos
+deban hacerse sobre las tablas por corpus.
+
+Dos categorías quedan fuera de la comprobación indirecta sin que eso sea un hueco. Los
+barridos de ingeniería vuelven a trocear el audio en ventanas o segmentos, así que no
+declaran un recuento de fragmentos con el que contrastar; llevan resumen criptográfico, que
+es la comprobación fuerte. Y los experimentos que emplean glosario reservan una fracción de
+los fragmentos para extraerlo y evalúan sobre el resto, de modo que su recuento queda por
+debajo del manifiesto a propósito: el programa descuenta esa reserva, porque denunciar como
+deriva la propia salvaguarda contra la fuga de información habría enterrado los cinco casos
+reales bajo cuatro falsos.
+
+Merece una advertencia de uso, porque costó tiempo: el recuento de palabras que guardan los
+resultados es el de las referencias \emph{ya normalizadas}, y el normalizador convierte los
+signos en espacios, de modo que un corpus puede declarar más palabras de las que tiene en
+crudo. Compararlo contra el texto sin normalizar produce discrepancias que no existen.
+
+\subsection*{Qué se versiona y qué no}
+
+Los manifiestos de corpus, los programas y las tablas y figuras generadas están en el
+repositorio. No lo están, deliberadamente, tres cosas: el audio, porque su licencia no
+permite redistribuirlo; los ficheros de resultados en crudo, porque son la salida de los
+programas y no su entrada; y el adaptador entrenado, por tamaño.
+
+La consecuencia hay que decirla sin adornos: \textbf{regenerar cualquier cifra con un solo
+comando es cierto sobre una instalación que ya tenga el corpus descargado}, que es el
+supuesto en el que se ha trabajado. Un tercero que parta del repositorio necesita antes
+obtener el audio de sus fuentes originales mediante los programas de descarga incluidos,
+disponer de una tarjeta gráfica, y reentrenar el adaptador para reproducir el resultado del
+ajuste fino. Los manifiestos hacen esa reconstrucción posible y verificable, que es su
+función; no la hacen inmediata.
 
 \section{Identidad de un resultado}
 

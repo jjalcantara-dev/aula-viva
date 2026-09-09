@@ -1,28 +1,38 @@
 % GENERADO AUTOMATICAMENTE por research/eval/report/tabla_tecnicas.py
 % No editar a mano.
+%
+% 3 de 8 filas quedan marcadas «Sin potencia». Si esta cuenta
+% cambia, hay que revisar la cifra que da el capitulo de conclusiones al verificar el
+% objetivo 3.
 \begin{table}[h]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|l|r|r|r|c|r|c|}
+\begin{tabular}{|l|l|r|r|r|r|c|r|c|}
     \hline
-    \textbf{Técnica} & \textbf{Corpus} & \textbf{WER base} &
+    \textbf{Técnica} & \textbf{Corpus} & \textbf{Palabras} & \textbf{WER base} &
     \textbf{WER téc.} & \textbf{$\Delta$ (pp)} & \textbf{IC 95\%} &
     \textbf{$p$} & \textbf{Signif.} \\
     \hline
-    Prompting contextual & \texttt{tedx-es} & 10.15 & 9.96 & -0.19 & [-0.61, +0.00] & 1.000 & No \\
-    Prompting contextual & \texttt{teleconciencia-es} & 18.79 & 19.14 & +0.35 & [-0.52, +1.42] & 0.012 & No \\
-    Prompting contextual & \texttt{voxpopuli-es} & 9.99 & 9.60 & -0.39 & [-1.14, +0.45] & 0.375 & No \\
-    Prompting contextual & \texttt{voxpopuli-es-400} & 9.51 & 9.14 & -0.37 & [-0.76, -0.05] & 0.230 & No \\
-    Post-corrección con LLM & \texttt{teleconciencia-es} & 19.55 & 22.77 & +3.23 & [+2.66, +3.84] & 0.000 & Sí \\
-    Post-corrección con LLM & \texttt{voxpopuli-es-400} & 9.63 & 10.81 & +1.18 & [+0.84, +1.54] & 0.000 & Sí \\
-    Post-corrección con LLM & \texttt{voxpopuli-es} & 12.50 & 12.15 & -0.35 & [-1.69, +1.12] & 1.000 & No \\
-    Fine-tuning con LoRA & \texttt{voxpopuli-es-400} & 9.63 & 8.40 & -1.23 & [-1.75, -0.77] & 0.000 & Sí \\
+    Prompting contextual & \texttt{tedx-es} & 532 & 10.15 & 9.96 & -0.19 & [-0.61, +0.00] & 1.000 & Sin potencia \\
+    Prompting contextual & \texttt{teleconciencia-es} & 14.706 & 18.79 & 19.14 & +0.35 & [-0.52, +1.42] & 0.012 & En el límite \\
+    Prompting contextual & \texttt{voxpopuli-es} & 771 & 9.99 & 9.60 & -0.39 & [-1.14, +0.45] & 0.375 & Sin potencia \\
+    Prompting contextual & \texttt{voxpopuli-es-400} & 7.551 & 9.51 & 9.14 & -0.37 & [-0.76, -0.05] & 0.230 & En el límite \\
+    Post-corrección con LLM & \texttt{teleconciencia-es} & 8.186 & 19.55 & 22.77 & +3.23 & [+2.66, +3.84] & 0.000 & Sí \\
+    Post-corrección con LLM & \texttt{voxpopuli-es-400} & 12.951 & 9.63 & 10.81 & +1.18 & [+0.84, +1.54] & 0.000 & Sí \\
+    Post-corrección con LLM & \texttt{voxpopuli-es} & 288 & 12.50 & 12.15 & -0.35 & [-1.69, +1.12] & 1.000 & Sin potencia \\
+    Fine-tuning con LoRA & \texttt{voxpopuli-es-400} & 12.951 & 9.63 & 8.40 & -1.23 & [-1.75, -0.77] & 0.000 & Sí \\
     \hline
 \end{tabular}}
 \caption{Efecto de cada técnica de adaptación sobre el WER (\%), con diseño pareado.
 $\Delta$ negativo indica mejora. El intervalo de confianza se obtiene por bootstrap
-remuestreando clips; $p$ corresponde al test de signos sobre los clips que cambian.}
+remuestreando clips; $p$ corresponde al test de signos sobre los clips que cambian.
+La columna de significación distingue tres situaciones que no deben confundirse:
+\emph{Sí} cuando ambos criterios coinciden, \emph{En el límite} cuando discrepan
+entre sí, y \textbf{\emph{Sin potencia}} cuando la muestra no alcanza las
+5.000 palabras de referencia que exige la sección~\ref{sec:potencia}.
+Estas últimas no dicen que la técnica no funcione: dicen que con ese material no se puede
+saber, y por eso no se interpretan.}
 \label{tab:comparativa-tecnicas}
 \end{table}

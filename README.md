@@ -34,6 +34,7 @@ investigadora y la ingeniería, tanto en el repositorio como en la defensa.
 | `exp-002-postcorreccion` | ¿Puede un LLM local reparar los errores del ASR? |
 | `exp-100-ventana` | ¿Cuánto WER cuesta cada segundo de latencia que se ahorra? |
 | `exp-003-lora` | ¿Mejora el ajuste fino de los pesos del modelo? |
+| `exp-004-arquitecturas` | ¿Es Whisper el modelo base correcto, o se eligió por inercia? |
 | `exp-101-dispositivo` | ¿Cuánto aporta realmente la GPU? |
 | `exp-102-vad` | ¿Conviene cortar por silencios en vez de por reloj? |
 | `exp-103-contexto` | ¿Ayuda arrastrar la transcripción anterior entre ventanas? |
@@ -115,6 +116,18 @@ La única diferencia entre ambos es la imagen base del servicio de reconocimient
 código es idéntico porque PyTorch expone la misma interfaz sobre las dos plataformas. El
 modelo se descarga una vez y queda en un volumen.
 
+**Los contenedores NO se levantan solos al encender el equipo.** La política de reinicio es
+`no` por defecto, porque en un equipo de desarrollo resucitar en cada arranque es una
+molestia: el servicio de reconocimiento mantiene un núcleo en espera activa y ~4,7 GB de RAM
+mientras vive. En un despliegue de aula se quiere lo contrario, y se activa en el `.env`:
+
+```bash
+REINICIO=unless-stopped
+```
+
+Si ya los tienes arrancando solos de un despliegue anterior, `make docker-parar` los elimina
+y con eso dejan de reaparecer.
+
 Requisitos del anfitrión: con AMD, pertenecer a los grupos `video` y `render`; con NVIDIA,
 el conjunto de herramientas de contenedores del fabricante. Y el plugin `compose` de
 Docker, que en Arch va en un paquete aparte (`docker-compose`).
@@ -142,9 +155,24 @@ eso da 1.6× tiempo real con `whisper-medium`, insuficiente para directo.
 
 La aplicación .NET sí funciona en arm64 sin cambios, contenerizada o no.
 
-> ⚠️ Las imágenes están escritas y el fichero de composición validado, pero **no se han
-> construido ni ejecutado**: cada una descarga varios gigabytes de dependencias. Antes de
-> darlo por bueno en un despliegue real hay que probarlo.
+> ✅ Construido y ejecutado sobre AMD: ambos contenedores arrancan y pasan su comprobación
+> de salud. El perfil de NVIDIA sigue sin probar por falta de la tarjeta.
+>
+> ⚠️ **La imagen del reconocimiento ocupa 83,5 GB** según `docker system df -v` (su
+> contenido real son 34 GiB; la diferencia es cómo contabiliza capas el snapshotter de
+> containerd). No es el modelo, que son 2,85 GB: es la base `rocm/pytorch`, etiquetada
+> `npi.amdgpu_family:device-all`, que transporta núcleos precompilados para **24
+> arquitecturas de GPU**. De los 792 MB de `rocblas`, los de gfx1201 son **10 MB**; y hay 13
+> `libMIOpenCKGroupedConv_gfx*.so` que suman 4,4 GB, de las que se usa una. Incluye además
+> `_rocm_sdk_devel` (15 GB de compiladores) pese a anunciarse como imagen de runtime.
+>
+> A eso se suman 11,6 GB de núcleos compilados en el volumen de caché, porque ROCm no
+> distribuye binarios para gfx1201. Total a efectos de planificación: **~100 GB**, frente a
+> ~5 GB de la ejecución nativa.
+>
+> Dos mejoras pendientes: partir de una base restringida a una familia de GPU, y **fijar una
+> versión estable**, porque `rocm/pytorch:latest` es una compilación *nightly*
+> (`RELEASE_TYPE=nightly`) y dos construcciones separadas no dan el mismo sistema.
 
 ### Restricciones de acceso
 
@@ -175,7 +203,7 @@ Cuatro hallazgos que condicionan el diseño de la comparativa:
    son casi idénticos (`voxpopuli` 10.44 vs `tedx` 10.22). Lo que lleva el WER de 3% a
    23% es leer un texto frente a hablar de forma espontánea.
 2. **En dominio real, escalar el modelo deja de servir.** De `medium` a `turbo` no se
-   gana nada. El margen que queda está en la adaptación, no en el tamaño — que es
+   gana nada. El margen que queda está en la adaptación, no en el tamaño, que es
    justamente la premisa de este trabajo.
 3. **Δ tildes mide la calidad de la referencia.** Cuanto más negativo, más sucia: las
    transcripciones de CIEMPIESS omiten tildes y traen erratas; las de VoxPopuli están
@@ -210,7 +238,7 @@ en vivo, no llega. En GPU hay 8.1× de margen.
 
 ## Estado
 
-- [x] Entorno GPU verificado — entrena (R2 mitigado)
+- [x] Entorno GPU verificado: entrena (R2 mitigado)
 - [x] Pipeline de evaluación WER/CER con normalización configurable
 - [x] Baseline reproducible, 6 modelos, trazabilidad de commit y semilla
 - [x] Búsqueda de corpus y auditoría de calidad de referencia
@@ -220,11 +248,25 @@ en vivo, no llega. En GPU hay 8.1× de margen.
 - [x] Troceado del audio resuelto con datos: exp-100 → exp-102 → exp-103
 - [x] Robustez frente al ruido de aula caracterizada (exp-104)
 - [x] Cuatro capas de evaluación: WER, terminología, anomalías, errores críticos
-- [x] Aplicación .NET con segmentación por silencios y 19 pruebas
-- [ ] **Solicitud de poliMedia enviada** (R1, camino crítico) — `docs/solicitud-polimedia.md`
-- [ ] Protocolo de evaluación congelado (H2) — bloqueado por R15 (sin director)
-- [ ] Fine-tuning con LoRA (tercera técnica)
+- [x] Aplicación .NET con segmentación por silencios y 88 pruebas
+- [ ] **Solicitud de poliMedia enviada** (R1, camino crítico): borrador listo para
+      enviar en `docs/solicitud-polimedia.md`. En paralelo, `docs/solicitud-albayzin-rtve.md`
+      para español peninsular espontáneo, que es lo que hoy falta.
+      **Mientras no salga, tres frases de la memoria dicen que sí se cursó**; el propio
+      fichero indica qué revertir al enviarlo
+- [ ] Protocolo de evaluación congelado (H2): bloqueado por R15 (sin director)
+- [x] Fine-tuning con LoRA (tercera técnica): única que mejora
 - [x] exp-002 replicado sobre referencias verificadas (`voxpopuli_es_400`)
+
+## Licencia
+
+**GNU AGPL-3.0** (`LICENSE`). Libre de usar, modificar y desplegar; quien lo modifique y lo
+ofrezca como servicio en red debe publicar sus cambios. El razonamiento, incluida la razón
+por la que «libre pero sin uso comercial» no existe como licencia de código abierto, está en
+`docs/decisiones/006-licencia.md`.
+
+La licencia cubre **el código**. El corpus no se redistribuye y mantiene las condiciones de
+su procedencia (RL4).
 
 ## La comparativa de técnicas
 
@@ -234,9 +276,9 @@ por bootstrap y el test de signos.
 
 | Técnica | Δ WER (pp) | IC 95% | Veredicto |
 |---|---:|---|---|
-| Prompting contextual | −0.37 | [−0.76, −0.05] | **Sin efecto** — signos opuestos en dos corpus, pruebas discrepantes |
-| Post-corrección con LLM | +1.18 | [+0.84, +1.54] | **Degrada** — replicado en dos corpus muy distintos |
-| **Fine-tuning con LoRA** | **−1.23** | [−1.75, −0.77] | **Mejora** — única concluyente |
+| Prompting contextual | −0.37 | [−0.76, −0.05] | **Sin efecto**: signos opuestos en dos corpus, pruebas discrepantes |
+| Post-corrección con LLM | +1.18 | [+0.84, +1.54] | **Degrada**: replicado en dos corpus muy distintos |
+| **Fine-tuning con LoRA** | **−1.23** | [−1.75, −0.77] | **Mejora**: única concluyente |
 
 **Solo funciona la que modifica los pesos.** Las dos que actúan sin tocar el modelo no
 aportan, y una perjudica.

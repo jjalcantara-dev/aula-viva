@@ -34,10 +34,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from eval.metrics.wer import evaluar  # noqa: E402
 from eval.normalizers.basico import basico  # noqa: E402
+from eval.stats.pareado import (conteo_signos, ic_bootstrap,  # noqa: E402
+                                prueba_signos, veredicto)
 from segmentador import segmentar  # noqa: E402
 from src.trazabilidad import procedencia  # noqa: E402
 
 AQUI = Path(__file__).resolve().parent
+
+#: Par que sostiene el resultado principal del TFM: ambas estrategias con la MISMA
+#: latencia media (2.68 s frente a 2.93 s), que es la unica comparacion honesta. Comparar
+#: por filas, con el mismo tope, mide sobre todo la duracion del segmento.
+PAR_LATENCIA_EQUIVALENTE = (("ventana fija", 3.0), ("silencios", 8.0))
 DECODIFICACION = dict(
     temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
     logprob_threshold=-1.0,
@@ -88,6 +95,12 @@ def main():
     print("-" * 64)
 
     resultados = []
+    # Las hipotesis POR CLIP de cada condicion, para poder contrastar el par de latencia
+    # equivalente sin volver a transcribir. Sin esto no hay intervalo de confianza, y el
+    # resultado principal del trabajo quedaba siendo el unico sin doble criterio.
+    hipotesis_por_condicion: dict[tuple[str, float], list[str]] = {}
+    referencias = [basico(f["referencia"]) for f in filas]
+
     for tope in TOPES:
         for estrategia in ("ventana fija", "silencios"):
             refs, hips, duraciones = [], [], []
@@ -99,6 +112,7 @@ def main():
                 hips.append(basico(" ".join(transcribir(p, sr) for p in partes)))
                 refs.append(basico(fila["referencia"]))
 
+            hipotesis_por_condicion[(estrategia, tope)] = hips
             r = evaluar(refs, hips)
             media = float(np.mean(duraciones))
             p95 = float(np.percentile(duraciones, 95))
@@ -115,15 +129,56 @@ def main():
         print(f"  tope {tope:.0f}s: {(s['wer'] - f['wer']) * 100:+6.2f} pp de WER"
               f"   (duracion media {f['duracion_media_s']:.1f}s -> {s['duracion_media_s']:.1f}s)")
 
+    # --- Contraste del par de latencia equivalente -------------------------------------
+    # Es el par del que sale la cifra que la memoria compara con las tecnicas de
+    # adaptacion. Aquellas se miden con IC bootstrap y test de signos; esta no lo hacia, de
+    # modo que el resultado central del trabajo era el unico sin doble criterio.
+    (est_a, tope_a), (est_b, tope_b) = PAR_LATENCIA_EQUIVALENTE
+    hip_a = hipotesis_por_condicion[(est_a, tope_a)]
+    hip_b = hipotesis_por_condicion[(est_b, tope_b)]
+
+    ic = ic_bootstrap(referencias, hip_a, hip_b, semilla=args.semilla)
+    mejoran, empeoran, empates = conteo_signos(referencias, hip_a, hip_b)
+    p = prueba_signos(mejoran, empeoran)
+    fila_a = next(r for r in resultados
+                  if r["estrategia"] == est_a and r["tope_s"] == tope_a)
+    fila_b = next(r for r in resultados
+                  if r["estrategia"] == est_b and r["tope_s"] == tope_b)
+    delta = (fila_b["wer"] - fila_a["wer"]) * 100
+
+    pareado = {
+        "condicion_a": {"estrategia": est_a, "tope_s": tope_a,
+                        "wer": fila_a["wer"], "duracion_media_s": fila_a["duracion_media_s"]},
+        "condicion_b": {"estrategia": est_b, "tope_s": tope_b,
+                        "wer": fila_b["wer"], "duracion_media_s": fila_b["duracion_media_s"]},
+        "delta_wer_pp": round(delta, 2),
+        "ic95_pp": [round(ic[0] * 100, 2), round(ic[1] * 100, 2)],
+        "mejoran": mejoran, "empeoran": empeoran, "sin_cambio": empates,
+        "p_test_signos": p,
+        "n_palabras_ref": sum(len(r.split()) for r in referencias),
+        "veredicto": veredicto((ic[0] * 100, ic[1] * 100), p),
+    }
+
+    print(f"\ncontraste a latencia media equivalente "
+          f"({fila_a['duracion_media_s']:.2f}s frente a {fila_b['duracion_media_s']:.2f}s):")
+    print(f"  {est_b} (tope {tope_b:.0f}s) frente a {est_a} (tope {tope_a:.0f}s)")
+    print(f"  diferencia de WER : {delta:+.2f} pp  "
+          f"(IC95 [{ic[0] * 100:+.2f}, {ic[1] * 100:+.2f}])")
+    print(f"  clips             : {mejoran} mejoran, {empeoran} empeoran, "
+          f"{empates} empatan (p={p:.2g})")
+    print(f"  palabras de ref.  : {pareado['n_palabras_ref']}")
+    print(f"  veredicto         : {pareado['veredicto']}")
+
     salida = AQUI / "results"
     salida.mkdir(exist_ok=True)
     (salida / f"metricas_{args.modelo.replace('/', '_')}__{args.manifiesto.stem}.json")\
         .write_text(json.dumps({
             "experimento": "exp-102-vad",
             "fecha_utc": datetime.now(timezone.utc).isoformat(),
-            "procedencia": procedencia(RAIZ, args.manifiesto),
+            "procedencia": procedencia(RAIZ, args.manifiesto, len(filas)),
             "config": vars(args) | {"manifiesto": str(args.manifiesto)},
             "resultados": resultados,
+            "pareado": pareado,
         }, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     print(f"\nresultados -> {salida.relative_to(RAIZ)}/")
 

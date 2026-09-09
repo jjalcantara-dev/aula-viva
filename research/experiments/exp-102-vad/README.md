@@ -63,7 +63,7 @@ hasta que se alcanza el tope.
 
 Para accesibilidad la previsibilidad también cuenta, así que **ambas cifras deben
 reportarse en la memoria**, no solo la media. Mitigación posible: bajar el tope para acotar
-el peor caso, aceptando algo más de WER — el barrido da la curva para elegir con datos.
+el peor caso, aceptando algo más de WER: el barrido da la curva para elegir con datos.
 
 ## Recomendación
 
@@ -71,7 +71,7 @@ Adoptar **segmentación por silencios con tope de 5-8 s** en la aplicación. La 
 exacta depende de qué se priorice:
 
 - **tope 8 s**: mejor WER (12.48%), p95 de 5.92 s
-- **tope 5 s**: WER 14.53%, p95 acotado a 5.00 s — peor caso garantizado
+- **tope 5 s**: WER 14.53%, p95 acotado a 5.00 s, peor caso garantizado
 
 🔴 **DIRECTOR: confirmar que la segmentación por silencios entra en el alcance del núcleo
 aplicado, y si el criterio es la latencia media o el peor caso.**

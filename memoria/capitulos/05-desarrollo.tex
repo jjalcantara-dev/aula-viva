@@ -26,11 +26,23 @@ agrupan dentro de un mismo fragmento y un mismo hablante. Tratar las palabras co
 observaciones independientes estrecha el intervalo de confianza de forma artificial y
 produce significación donde no la hay.
 
-\textbf{Trazabilidad completa.} Cada resultado registra el commit del código, si el árbol
-de trabajo estaba limpio, y el resumen criptográfico del manifiesto de corpus empleado. La
+\textbf{Trazabilidad.} Cada resultado registra el commit del código, si el árbol de
+trabajo estaba limpio, y el resumen criptográfico del manifiesto de corpus empleado. La
 razón se explica en la sección~\ref{sec:incidentes}.
 
+Conviene precisar hasta dónde llega, porque el principio se adoptó \emph{durante} el
+trabajo y no antes: el resumen del manifiesto se escribió como respuesta al incidente que
+describe la sección~\ref{sec:incidentes}, de modo que cubre once de los cincuenta y dos
+resultados, los posteriores. Todos registran configuración y commit, pero en cuarenta y
+cuatro ese commit vale «sin repositorio», porque son anteriores a que el trabajo estuviera
+versionado. Para esos, la garantía de que el corpus no ha cambiado por debajo se sustituye
+por una comprobación indirecta y automatizada que contrasta el número de fragmentos y de
+palabras declarados contra el manifiesto actual. El
+apéndice~\ref{ap:reproducibilidad} da el desglose y explica qué señala hoy esa
+comprobación.
+
 \subsection{Potencia estadística requerida}
+\label{sec:potencia}
 
 Antes de interpretar ninguna diferencia hubo que responder cuánto material hace falta para
 poder detectarla. Con 499 palabras de referencia, el error estándar del WER en torno al
@@ -81,8 +93,10 @@ sección~\ref{sec:limitaciones}.
 \subsection{Elección del modelo}
 
 Se evaluaron seis tamaños de Whisper sobre el mismo material. La
-figura~\ref{fig:modelos} muestra el compromiso entre calidad y coste, y la
-tabla~\ref{tab:baseline-corpus} recoge el detalle por corpus.
+figura~\ref{fig:modelos} muestra el compromiso entre calidad y coste, la
+tabla~\ref{tab:baseline-corpus} recoge el resumen por corpus y la
+tabla~\ref{tab:baseline-modelos-tedx-es} el detalle sobre habla espontánea, que es el
+registro donde la elección se juega.
 
 \begin{figure}[h]
 \centering
@@ -94,18 +108,43 @@ vertical marca el límite de tiempo real. Generada desde los datos de ejecución
 
 \input{tablas/baseline_corpus_fallback}
 
-Dos observaciones condicionan el resto del trabajo.
+\input{tablas/baseline_modelos_tedx_es_fallback}
+
+Antes de leer la tabla conviene una advertencia sobre ella. Sus columnas no comparten en
+todos los casos el tamaño de muestra, porque un corpus se amplió después del barrido inicial
+y el modelo elegido se reevaluó sobre la ampliación. Las comparaciones \emph{entre modelos}
+deben hacerse por tanto sobre las tablas por corpus, que declaran su muestra fila a fila; la
+tabla agregada sirve para comparar \emph{material}, que es para lo que se construyó. El
+origen de esa asimetría se documenta en la sección~\ref{sec:incidentes}.
+
+Hechas esas cuentas sobre muestra común, dos observaciones condicionan el resto del trabajo.
 
 La primera: en material de habla espontánea, aumentar el tamaño del modelo deja de
-compensar. Entre \texttt{medium} y \texttt{large-v3-turbo} la diferencia es nula, y entre
-\texttt{small} y \texttt{medium} apenas 1,5 puntos sobre el corpus más difícil, frente a
-los 3,2 que separan los mismos modelos en voz leída. El margen que queda no está en el
-tamaño; ese es precisamente el supuesto que motiva estudiar la adaptación.
+compensar. Entre \texttt{medium} y \texttt{large-v3-turbo} la diferencia no solo es nula
+sino que cambia de signo según el corpus, y sobre habla espontánea el modelo mayor es
+\emph{peor} (tabla~\ref{tab:baseline-modelos-tedx-es}). Entre \texttt{small} y
+\texttt{medium} la distancia se estrecha a medida que el material se aleja de la voz leída:
+3,40 puntos en FLEURS, 1,91 en charla espontánea y 1,22 en locución de medios. El margen que
+queda no está en el tamaño; ese es precisamente el supuesto que motiva estudiar la
+adaptación.
 
-La segunda: lo que domina el error no es la variedad dialectal sino el registro. A registro
-equivalente, el español peninsular y el mexicano dan cifras casi idénticas: 10,44\% frente
-a 10,22\%. Lo que lleva el error del 3\% al 23\% es leer un texto frente a hablar de forma
-espontánea.
+La segunda: lo que domina el error no es la variedad dialectal sino el registro. El recorrido
+del 3\% al 23\% se explica por lo que se está haciendo con la voz, leer un texto frente a
+hablar de forma espontánea, y no por de dónde es quien habla: los dos corpus de habla
+pública preparada, el parlamentario peninsular y la charla mexicana, quedan en 10,44\% y
+10,22\% pese a estar en extremos opuestos del dominio dialectal, mientras que dos corpus de
+la misma variedad se separan más de diez puntos según el registro.
+
+Conviene no pedirle a esa comparación más de lo que puede dar. Ambas cifras proceden de
+cuarenta fragmentos, muy por debajo del umbral de la sección~\ref{sec:potencia}, de modo que
+una diferencia de 0,22 puntos entre ellas no es distinguible de cero y tampoco lo sería una
+bastante mayor; y los dos registros son parecidos, no idénticos. Lo que el dato sostiene es
+que la variedad no aparece como el factor dominante frente al registro, cuyo efecto es de
+otro orden de magnitud. Lo que no sostiene es que la variedad sea irrelevante. Por eso no se
+la descarta como factor: se la deja fuera de la comparativa por no poder controlarla con el
+material disponible, que es una limitación y así consta en la sección~\ref{sec:limitaciones}.
+Explica además por qué ninguno de los sustitutos reemplaza al corpus objetivo, cuyo registro
+es justamente el que falta.
 
 \subsection{El modelo elegido y por qué no es el más rápido}
 
@@ -113,14 +152,64 @@ La primera lectura recomendaba \texttt{large-v3-turbo}: igualaba a \texttt{mediu
 de error y era el doble de rápido. Esa lectura ignoraba el modo de fallo.
 
 Contabilizando las salidas anómalas, entendidas como transcripciones con menos de un cuarto
-de las palabras esperadas, \texttt{turbo} produjo tres sobre 180 fragmentos y
-\texttt{medium} ninguna. Y no son truncamientos inocuos: en varios fragmentos el modelo
-emitió una frase fluida, gramatical y plausible en el dominio que no guardaba relación con
-lo dicho.
+de las palabras esperadas, \texttt{turbo} produjo tres y \texttt{medium} ninguna sobre los
+mismos 180 fragmentos, que es la muestra que ambos comparten. Conviene la precisión, porque
+\texttt{medium} tampoco está libre de ellas: sobre otro material sí las produce, dos en los
+cuatrocientos fragmentos del corpus parlamentario. Lo que la comparación sostiene es que en
+igualdad de condiciones aparecen en uno y no en el otro, no que el modelo elegido no
+alucine. Y no son truncamientos inocuos: en varios fragmentos el modelo emitió una frase
+fluida, gramatical y plausible en el dominio que no guardaba relación con lo dicho.
 
 Para un sistema de accesibilidad ese criterio pesa más que unas décimas de tasa de error.
 Un subtítulo ausente se nota; uno inventado, no: el alumno con discapacidad auditiva no
 tiene forma de detectarlo porque se lee perfectamente bien. Se eligió \texttt{medium}.
+
+\section{Contraste con una arquitectura distinta}
+\label{sec:arquitecturas}
+
+El barrido anterior compara variantes de una misma familia, de modo que justifica cuál de
+ellas emplear pero no la familia en sí. Durante el desarrollo aparecieron modelos
+multilingües construidos sobre una arquitectura distinta, con cifras publicadas mejores,
+y la pregunta pasó a ser exigible: la respuesta a por qué este modelo y no otro no puede
+ser que fuera el primero disponible.
+
+Se contrastó el modelo elegido con un transductor (sección~\ref{sec:transductores}) de 0,6 mil millones de parámetros sobre
+los mismos ochocientos clips: cuatrocientos de habla parlamentaria leída y cuatrocientos de
+habla espontánea, estos últimos una submuestra del corpus grande con manifiesto propio, de
+modo que las cifras de esta sección no son directamente comparables con las medidas sobre
+sus mil doscientos fragmentos. Un transductor emite un símbolo por trama y no dispone del bucle
+autorregresivo sobre el texto donde el primero aplica su reintento por temperatura, así que
+no existe una decodificación común: cada sistema se evaluó en la suya, y la comparación es
+entre sistemas completos.
+
+\input{tablas/comparativa_arquitecturas}
+
+La ventaja en tasa de error del transductor resultó ser real pero limitada al habla leída,
+y menor de lo que aparentaba. Las referencias escriben los números en letra mientras que el
+modelo empleado los escribe en cifra, y como \emph{dos mil diez} son tres unidades léxicas
+frente a la única de \emph{2010}, el alineamiento contabiliza tres errores por cada cifra
+correctamente reconocida. Repitiendo el contraste sobre los clips cuya referencia no
+contiene numerales, la diferencia baja de 2,80 a 2,31 puntos: sigue siendo significativa,
+pero cerca de una quinta parte de lo medido era convención de escritura. Sobre habla
+espontánea no hay diferencia detectable en ningún caso.
+
+El contenido crítico cuenta otra historia. Con tasas de error indistinguibles sobre habla
+espontánea, el modelo empleado pierde 48 de 138 negaciones y el transductor 16. Es el mismo
+fenómeno que motivó las métricas complementarias, observado ahora entre arquitecturas: dos
+sistemas que el WER declara equivalentes difieren en un factor de tres en aquello que
+determina si la frase conserva su significado.
+
+El criterio que resolvió fue de nuevo el modo de fallo. El transductor no trunca: traduce.
+Produjo frases completas en inglés ante habla espontánea española y alternancias de idioma
+dentro de una misma oración, en trece clips de los ochocientos, frente a ninguno del modelo
+empleado. Y no es corregible por configuración, porque esa arquitectura no expone ningún
+mecanismo para imponer el idioma de salida, mientras que al modelo empleado sí se le fija.
+Se mantuvo por tanto la elección inicial, ahora con una razón medida detrás.
+
+Localizarlo requirió construir un detector específico. El de salidas anómalas identifica
+truncamientos y expansiones por su longitud, y una frase traducida tiene longitud normal;
+ese punto ciego existía desde el principio y solo se hizo visible al evaluar un modelo con
+un modo de fallo distinto.
 
 \section{Comparativa de técnicas de adaptación}
 
@@ -206,14 +295,15 @@ modesta: de 7,7\% a 6,2\%.
 
 \section{El WER no basta para evaluar accesibilidad}
 
-Cuatro observaciones independientes, obtenidas a lo largo del trabajo, apuntan a la misma
-conclusión: la métrica habitual del campo oculta precisamente los fallos que perjudican al
-usuario final.
+Cinco observaciones independientes, obtenidas a lo largo del trabajo y sobre modelos,
+corpus y técnicas distintos, apuntan a la misma conclusión: la métrica habitual del campo
+oculta precisamente los fallos que perjudican al usuario final.
 
-\textbf{Contenido crítico.} Sobre el corpus grande, con una tasa de error de palabra del
-18,61\%, que suena aceptable, el sistema pierde o altera el 28\% de las negaciones e
-introduce trece que nadie pronunció. Perder una preposición se reconstruye por contexto;
-perder un \emph{no} invierte la frase. El WER cuenta ambos errores igual.
+\textbf{Contenido crítico.} Sobre el corpus grande completo, mil doscientos fragmentos, con
+una tasa de error de palabra del 18,61\%, que suena aceptable, el sistema pierde o altera el
+28\% de las negaciones (134 de 477) e introduce trece que nadie pronunció. Perder una
+preposición se reconstruye por contexto; perder un \emph{no} invierte la frase. El WER
+cuenta ambos errores igual.
 
 \textbf{Alucinaciones fluidas.} Los modelos producen ocasionalmente texto verosímil y falso
 en lugar de fallar de forma visible. Al tratarse de salidas gramaticales y coherentes con
@@ -227,14 +317,34 @@ inocua cuando en realidad tiene un efecto dirigido.
 en las fronteras entre ventanas elevaba el WER por encima del 100\%, pero pasó inadvertido
 en las pruebas automáticas y solo se detectó al leer una transcripción real.
 
+\textbf{Dos arquitecturas que el WER declara equivalentes.} Sobre habla espontánea, el
+modelo empleado y el transductor contrastado en la sección~\ref{sec:arquitecturas} no
+presentan diferencia detectable de tasa de error; sin embargo uno pierde el 35\% de las
+negaciones y el otro el 12\%. Es la observación más contundente de las cinco, porque descarta
+que el problema sea una peculiaridad de un modelo concreto: es una propiedad de la métrica.
+
+Estas dos últimas cifras proceden de la submuestra de cuatrocientos fragmentos sobre la que
+se ejecutó el contraste de arquitecturas, y no de los mil doscientos del párrafo anterior;
+de ahí que la proporción de negaciones perdidas por el mismo modelo y el mismo corpus
+aparezca como 28\% en un caso y 35\% en el otro, y que su tasa de error figure como 18,61\%
+en la tabla~\ref{tab:baseline-corpus} y como 19,55\% en la
+tabla~\ref{tab:comparativa-arquitecturas}. Son medidas distintas de la misma configuración
+sobre cantidades distintas de material, no una discrepancia. Se explicita porque el trabajo
+sostiene que el tamaño de la muestra forma parte de la identidad de un resultado, y eso
+obliga a declararlo también en la prosa.
+
 De estas observaciones surgieron dos instrumentos complementarios: una métrica de
 cobertura y precisión sobre la terminología del dominio, y otra que contabiliza los errores
 sobre negaciones, numerales y cuantificadores, es decir, sobre las unidades cuya
-alteración cambia el significado y no solo la forma.
+alteración cambia el significado y no solo la forma. A ellos se añadió después un tercero,
+el detector de fuga de idioma, por una razón que conviene retener: los dos primeros nacieron
+de fallos observados, y el tercero de descubrir que los dos primeros tenían un punto ciego.
+Ningún conjunto de métricas complementarias puede darse por cerrado.
 
 \section{Desarrollo de la aplicación}
 
 \subsection{Arquitectura}
+\label{sec:arquitectura-app}
 
 El sistema separa estrictamente el núcleo investigador del aplicado: la aplicación depende
 de una interfaz de reconocimiento y no del código de los experimentos. Esa frontera permitió
@@ -251,6 +361,105 @@ El acceso queda restringido a la red local por la propia aplicación, que rechaz
 conexión ajena a un rango privado. Se difunde audio de aula con voces identificables; la
 restricción no puede depender de que nadie configure mal un reenvío de puertos.
 
+La figura~\ref{fig:topologia} resume esa disposición.
+
+\input{figuras/arquitectura-topologia}
+
+\subsection{La pila tecnológica y el puente entre los dos núcleos}
+
+La aplicación está escrita en C\# sobre ASP.NET Core con Blazor Server, y el modelo se
+ejecuta en Python. Esa frontera no es una preferencia estética: la biblioteca de cálculo con
+soporte para la tarjeta gráfica empleada solo existe en Python, de modo que el
+reconocimiento no puede vivir dentro del proceso de la aplicación.
+
+La unión es un servicio HTTP mínimo que carga el modelo una vez y expone una única
+operación: recibir audio y devolver texto. La restricción que lo gobierna es metodológica y
+no técnica: \textbf{usa exactamente la misma configuración de decodificación que los
+experimentos}. Si la aplicación decodificara de otro modo, las cifras medidas dejarían de
+describir el sistema desplegado, que es justamente el factor de confusión documentado en la
+sección~\ref{sec:incidentes}.
+
+Blazor Server se eligió porque resuelve gratis dos requisitos que de otro modo habrían
+exigido infraestructura propia. El primero es RF3: el alumnado no instala nada, porque toda
+la lógica de interfaz vive en el servidor y el navegador solo recibe actualizaciones del
+árbol de la página. El segundo es la difusión: el canal persistente que Blazor mantiene con
+cada cliente sirve para empujar los subtítulos, sin necesidad de montar un servicio de
+mensajería aparte. El precio es la contrapartida conocida de ese modelo: cada cliente
+consume estado en el servidor y la interfaz depende de la latencia de red. Resulta asumible
+con el número de clientes de un aula y con la red local como escenario.
+
+\subsection{Los componentes del núcleo}
+
+La lógica que decide qué se transcribe y cómo se muestra vive en una biblioteca sin
+dependencias de la interfaz ni del motor, lo que permite probarla sin arrancar ni el modelo
+ni el navegador. Seis piezas la componen.
+
+\textbf{La sesión de aula} mantiene la clase en curso: el histórico de segmentos y la lista
+de clientes conectados. Es única para toda la instancia, porque representa la clase y no al
+usuario. De ahí sale RF5 casi sin código: un alumno que se incorpora tarde recibe el
+histórico retenido en el momento de conectarse.
+
+\textbf{El segmentador en vivo} decide dónde cortar el audio, y es donde aterriza el
+hallazgo de la sección anterior. Sus valores por defecto proceden del barrido y no de la
+intuición: son los de la fila ganadora de la tabla~\ref{tab:vad}, es decir tope de ocho
+segundos, mínimo de segundo y medio, pausa de 300~ms y umbral al 35\% del nivel de voz. El
+tope conviene leerlo con cuidado, porque no significa que los segmentos duren ocho
+segundos: cortando en pausas casi nunca se alcanza, y de ahí que la duración media medida
+sea de 2,93~s. Es el valor que produce las cifras de latencia que reporta la
+sección~\ref{sec:latencia}, y una prueba automática comprueba que sigue siendo el que la
+aplicación carga, para que esta descripción no se separe del código. Hay una diferencia
+respecto al experimento que resultó tener consecuencias:
+en la grabación completa el umbral de silencio puede calcularse sobre el percentil 25 de las
+energías, porque la grabación entera contiene pausas; en vivo eso falla, ya que si el
+hablante lleva unos segundos sin parar, el percentil 25 ya es voz y el sistema se cree en
+silencio permanente. En vivo el umbral se define contra la \emph{mediana} de las energías
+recientes. El fallo lo detectaron las pruebas automáticas, no el uso.
+
+\textbf{El fusionador de solapamiento} recorta el mayor solape entre el final del texto ya
+emitido y el principio del nuevo. Existe por el defecto descrito más arriba, el que
+multiplicaba texto en las fronteras y llevaba el error por encima del 100\%. Gracias a él la
+aplicación puede conservar el solapamiento entre ventanas, que evita partir palabras en la
+frontera, sin pagar su coste.
+
+\textbf{El glosario} resuelve RF4 marcando en el subtítulo los términos que el docente
+declara importantes. Es deliberadamente la versión léxica: coincidencia contra una lista
+aportada por el profesor, ignorando mayúsculas, tildes y puntuación, porque el motor no
+acentúa ni puntúa igual que un glosario escrito a mano. La detección semántica de conceptos
+es un problema abierto y quedó declarada fuera de alcance.
+
+\textbf{El filtro de red privada} implementa RNF3 y RL3 rechazando toda conexión que no
+provenga de un rango privado. Si algún día hiciera falta acceso remoto, la vía correcta es
+una red privada virtual hasta el centro: el dispositivo entra en la red local y la
+comprobación lo acepta sin cambiar nada.
+
+\textbf{El control de acceso al puesto docente} separa la vista de emisión de la de
+recepción mediante una clave compartida. No es autenticación de usuarios y no pretende
+serlo: la vista del alumnado es deliberadamente abierta, porque nadie debe pelearse con una
+contraseña para leer subtítulos, pero la de emisión activa el micrófono y difunde a toda la
+clase.
+
+Esa asimetría tiene fundamento y no es solo comodidad. Según la evidencia recogida en la
+sección~\ref{sec:para-quien}, la población que se beneficia de un subtítulo de aula es
+bastante mayor que el colectivo que lo justifica normativamente: incluye a quien está
+aprendiendo la lengua de la clase y, en menor medida, al alumnado sin ninguna necesidad
+específica. Un recurso que hubiera que solicitar excluiría por diseño a casi todos ellos,
+y además obligaría a declararse a quien no quiera hacerlo. Abrir la vista de recepción es
+la decisión que convierte el sistema en una ayuda general en lugar de en un ajuste
+individual señalado.
+
+La figura~\ref{fig:pipeline} recorre esas piezas en el orden en que actúan sobre un segmento
+de audio, e indica de dónde sale cada una. Merece leerse por la columna derecha más que por
+la izquierda: lo que distingue a este sistema no es la cadena de componentes, que es la
+esperable, sino que cada eslabón responde a una medición o a un fallo observado.
+
+\input{figuras/arquitectura-pipeline}
+
+Una advertencia de diseño que costó tiempo: los motores se componen por decoración, de modo
+que el resaltado del glosario envuelve al motor real; eso hace que una comprobación de tipo
+concreto desde la interfaz \textbf{nunca se cumpla}. El diagnóstico de segmentación estuvo
+devolviendo ceros por ese motivo. Las capacidades opcionales viajan desde entonces en
+interfaces propias que los decoradores reenvían explícitamente.
+
 \subsection{Troceado del audio: latencia frente a calidad}
 
 El subtitulado en vivo no puede esperar a que termine la intervención: hay que trocear. La
@@ -261,79 +470,307 @@ sustancial: con ventanas de tres segundos el error casi se duplica respecto a tr
 el fragmento completo. El motivo son los cortes arbitrarios, que caen en mitad de palabra
 o de sintagma justo donde el modelo necesita contexto.
 
-Esa hipótesis se contrastó cortando en los silencios en lugar de por reloj. Los resultados
-aparecen en la tabla~\ref{tab:vad}.
+Ese barrido reveló antes otra cosa. En su primera ejecución, las ventanas cortas producían
+tasas de error \emph{por encima del 100\%}, lo que significa que el sistema emitía más
+errores que palabras tiene la referencia. La causa no era el modelo sino la implementación:
+cada ventana repetía el final de la anterior y ese texto se concatenaba dos veces, de modo
+que con ventana de un segundo y solape de medio, la mitad del contenido estaba duplicado.
+Aislado el defecto, el coste real de trocear con ventanas de un segundo baja del 105,32\% al
+35,81\%. El panel izquierdo de la figura~\ref{fig:segmentacion} conserva ambas curvas porque
+la distancia entre ellas es el resultado: casi todo lo que parecía coste de trocear era un
+error de fusión de texto.
 
-\begin{table}[h]
+\begin{figure}[h]
 \centering
-\small
-\begin{tabular}{|l|r|r|r|}
-\hline
-\textbf{Estrategia} & \textbf{WER} & \textbf{Duración media} & \textbf{p95} \\
-\hline
-Ventana fija, tope 3~s & 19,85\% & 2,68~s & 3,00~s \\
-Silencios, tope 8~s & \textbf{12,48\%} & 2,93~s & 5,92~s \\
-Sin trocear (referencia) & 10,44\% & --- & --- \\
-\hline
-\end{tabular}
-\caption{Segmentación por silencios frente a ventana fija, a latencia media equivalente.}
-\label{tab:vad}
-\end{table}
+\includegraphics[width=\textwidth]{figuras/segmentacion.pdf}
+\caption{Izquierda: coste de trocear por reloj, con y sin la duplicación en las fronteras.
+Derecha: WER frente a latencia media según dónde se corte; las etiquetas indican el tope de
+duración. Generada desde los datos de ejecución.}
+\label{fig:segmentacion}
+\end{figure}
 
-A latencia media prácticamente idéntica, segmentar por silencios reduce el error 7,4
-puntos y se queda a dos del techo que marca transcribir sin trocear. El mecanismo se ve en
-las duraciones: con tope de ocho segundos, la segmentación por pausas produce segmentos de
-2,9 segundos de media porque el tope casi nunca se alcanza. El resultado son segmentos
-cortos y completos, en lugar de cortos y partidos.
+La hipótesis de que el daño lo causan los cortes arbitrarios se contrastó cortando en los
+silencios en lugar de por reloj, con el mismo tope de duración en cada par para que la
+comparación no midiera simplemente la longitud del segmento. Los resultados aparecen en la
+tabla~\ref{tab:vad} y en el panel derecho de la figura~\ref{fig:segmentacion}.
+
+\input{tablas/segmentacion}
+
+La lectura por filas subestima el resultado, porque cada estrategia alcanza una duración
+media distinta con el mismo tope. La comparación que importa es a latencia media
+equivalente: ventana fija con tope de tres segundos produce segmentos de 2,68~s de media;
+segmentación por silencios con tope de ocho, de 2,93~s. Con esa diferencia de un cuarto de
+segundo, segmentar por silencios reduce el error 7,4 puntos y se queda a dos del techo que
+marca transcribir sin trocear.
+
+Ese par se somete al mismo doble criterio que las técnicas de adaptación, y sobre los mismos
+fragmentos, porque de otro modo la comparación entre ambas magnitudes que sostiene la
+sección siguiente no sería legítima: no se puede contrastar un efecto medido con intervalo
+de confianza contra otro que solo tiene una diferencia de medias. El remuestreo por clips
+sitúa la diferencia en $[-9{,}76, -5{,}04]$ puntos, y el test de signos cuenta 30 fragmentos
+que mejoran frente a 2 que empeoran ($p \approx 2\cdot10^{-7}$). Ambos criterios coinciden.
+Conviene subrayar por qué el resultado es concluyente pese a las 1.466 palabras de
+referencia, que están muy por debajo del umbral de la sección~\ref{sec:potencia}: ese umbral
+se calculó para detectar diferencias del orden de medio punto, y esta es catorce veces
+mayor. La muestra basta para el tamaño del efecto que hay que resolver aquí, y no bastaría
+para el de las técnicas de adaptación. Lo que la muestra sigue sin sostener es la cifra
+exacta, que es propia de este material, según se declara en la
+sección~\ref{sec:limitaciones}.
+
+El mecanismo se ve en las duraciones: con tope de ocho segundos, la segmentación por pausas
+produce segmentos de 2,9 segundos de media porque el tope casi nunca se alcanza. El
+resultado son segmentos cortos y completos, en lugar de cortos y partidos. En el panel
+derecho de la figura~\ref{fig:segmentacion} esto aparece como dominancia estricta: la curva
+de la segmentación por pausas está por debajo de la otra en todo el rango de latencias, de
+modo que no hay ningún punto de operación en el que trocear por reloj sea preferible.
 
 El precio es la previsibilidad: el percentil 95 pasa de 3,00 a 5,92 segundos. La latencia
 media mejora, pero el peor caso empeora; en accesibilidad esa distinción importa y ambas
 cifras deben reportarse.
 
 Se comprobó además si arrastrar la transcripción anterior como contexto entre ventanas
-mejoraba los cortes. No aporta: el efecto es de $+0{,}14$ puntos con ventana fija y
-$+0{,}61$ con segmentación por silencios. La explicación encaja con lo anterior: cuando los
-cortes caen en pausas, cada segmento ya es una unidad coherente, de modo que el contexto no
-añade información que falte pero sí arrastra los errores del segmento previo.
+mejoraba los cortes. No se detecta ningún efecto: $+0{,}14$ puntos con ventana fija y
+$+0{,}61$ con segmentación por silencios, ambos con el signo equivocado para la hipótesis y
+ambos, sobre cuarenta fragmentos, muy por debajo de lo que ese material puede resolver
+(sección~\ref{sec:potencia}). La medición no permite por tanto afirmar que la técnica no
+sirva; permite afirmar que, si aporta algo, es menos de lo que aquí se puede medir.
+
+La decisión de no arrastrar contexto no se apoya en esa cifra, que no daría para
+sostenerla, sino en dos razones que sí son independientes de ella. La primera es
+cualitativa y se observa en las transcripciones: el contexto propaga los errores del
+segmento anterior, de modo que una alucinación se hereda en lugar de extinguirse, y eso en
+accesibilidad pesa más que una décima de tasa de error. La segunda es que encaja con el
+mecanismo ya establecido: cuando los cortes caen en pausas, cada segmento es de por sí una
+unidad coherente, así que no hay información que el contexto pueda añadir. Ante un efecto
+no medible, se elige la opción que no puede propagar un fallo.
 
 \subsection{Requisito de hardware}
+\label{sec:hardware}
 
 Ejecutar el reconocimiento en unidad de procesamiento gráfico no es una comodidad sino un
-requisito: el modelo elegido alcanza 8,1 veces la velocidad del audio en GPU y solo 1,6 en
-procesador convencional. Descontado el troceado, esa segunda cifra no llega a tiempo real.
+requisito. El modelo elegido alcanza 8,1 veces la velocidad del audio en tarjeta gráfica y
+solo 1,6 en procesador convencional; el modelo inmediatamente menor, 18,0 frente a 4,8. En
+ambos casos la aceleración ronda el factor cinco, de modo que no es un efecto del tamaño del
+modelo sino de dónde se ejecuta.
+
+La cifra de 1,6 veces parece suficiente hasta que se recuerda que el sistema no transcribe
+una grabación sino un flujo. Cada segmento debe procesarse antes de que llegue el siguiente,
+y sobre ese margen tan estrecho cualquier variación, sea un segmento largo o cualquier otra
+carga del equipo, acumula retraso que ya no se recupera, porque el audio sigue llegando.
+Ejecutar en
+procesador convencional no es más lento: es inestable.
+
+Esto acota RNF5 en términos concretos: el sistema requiere un equipo con tarjeta gráfica
+dedicada, que es un gasto asumible para un centro pero no es cualquier equipo de despacho.
+Y refuerza la decisión de arquitectura, porque ese equipo hace falta \emph{una vez} para
+toda el aula: si cada dispositivo transcribiera, el requisito se multiplicaría por el número
+de alumnos y el sistema dejaría de ser desplegable.
 
 \subsection{Robustez frente al ruido de aula}
+\label{sec:ruido}
 
 Se caracterizó la degradación mediante ruido añadido de dos tipos: blanco, estacionario, y
 murmullo sintetizado superponiendo voces del propio corpus. Los resultados aparecen en la
 tabla~\ref{tab:ruido}.
 
-\begin{table}[h]
-\centering
-\small
-\begin{tabular}{|l|r|r|}
-\hline
-\textbf{Relación señal-ruido} & \textbf{Ruido blanco} & \textbf{Murmullo} \\
-\hline
-Audio limpio & 10,44\% & 10,44\% \\
-20~dB & 10,50\% & 11,66\% \\
-15~dB & 10,57\% & 11,19\% \\
-10~dB & 13,23\% & 12,41\% \\
-5~dB & 13,98\% & 14,26\% \\
-0~dB & 16,85\% & \textbf{36,02\%} \\
-\hline
-\end{tabular}
-\caption{Degradación frente al ruido según relación señal-ruido y tipo de ruido.}
-\label{tab:ruido}
-\end{table}
+\input{tablas/ruido}
 
-Hasta 15~dB la degradación es despreciable, lo que sitúa un micrófono de solapa corriente
-en zona segura y permite formular el requisito de captación en términos concretos. Pero el
-fallo no es gradual: entre 5 y 0~dB con murmullo el error se triplica, mientras que el
-ruido blanco al mismo nivel apenas lo altera. La diferencia confirma el mecanismo: lo que
-arruina el reconocimiento no es la energía del ruido sino que comparta espectro con la voz.
-Seis voces de fondo enmascaran lo que un ventilador no, y por eso los supresores de ruido
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\textwidth]{figuras/ruido.pdf}
+\caption{Degradación frente al ruido. La banda marca la zona en la que ningún tipo de ruido
+degrada más de 1,5 puntos, que es el ancho aproximado del intervalo de confianza que
+corresponde a una muestra de este tamaño según la sección~\ref{sec:potencia}; no se estima
+de nuevo sobre este barrido. Generada desde los datos de ejecución.}
+\label{fig:ruido}
+\end{figure}
+
+Hasta 15~dB la degradación se mantiene por debajo de lo que el propio barrido puede
+distinguir del ruido de medición, lo que sitúa un micrófono de solapa corriente en zona
+segura y permite formular el requisito de captación en términos concretos: RNF6 deja de ser
+``un micrófono adecuado'' y pasa a ser ``una captación que garantice 15~dB de relación
+señal-ruido en las condiciones de uso'', que es comprobable con un medidor.
+
+Pero el fallo no es gradual, y esa es la lectura que la tabla esconde y la
+figura~\ref{fig:ruido} muestra: entre 5 y 0~dB con murmullo el error salta 21,76 puntos de
+una vez, hasta multiplicar por tres y medio el del audio limpio, mientras que el ruido
+blanco al mismo nivel apenas lo altera, con 2,86 puntos como peor salto. La diferencia confirma el mecanismo: lo que arruina el
+reconocimiento no es la energía del ruido sino que comparta espectro con la voz. Seis voces
+de fondo enmascaran lo que un ventilador no, y por eso los supresores de ruido
 convencionales, diseñados para ruido estacionario, no resuelven el problema del aula.
+
+La consecuencia práctica para el despliegue es que el sistema no avisa de que se está
+degradando. Pasa de funcionar bien a fallar en un margen de cinco decibelios, de modo que
+una clase que se anima, con el ruido de fondo subiendo mientras la voz del docente no,
+puede cruzar el umbral sin que nada lo señale. Es un argumento a favor del micrófono de proximidad y en
+contra del micrófono ambiental, más allá de la diferencia media de calidad.
+
+\subsection{Contención de alucinaciones en el sistema desplegado}
+\label{sec:filtro}
+
+La elección de modelo se hizo con el criterio de minimizar las alucinaciones, pero
+minimizarlas no es eliminarlas, y el uso real lo demostró de inmediato. Con el micrófono
+abierto y el docente en pausa, el sistema emitió \emph{«¡Suscríbete al canal!»} y, en otra
+ocasión, un bucle de la conjunción \emph{y} repetida. El motivo es conocido: el modelo se
+entrenó con enormes cantidades de subtítulos de vídeo, de modo que ante silencio o audio
+ininteligible tiende a emitir las frases más frecuentes de ese material en lugar de callar.
+
+Es el fallo más grave que este sistema puede cometer. La salida es gramatical, se lee con
+naturalidad y el alumno con discapacidad auditiva no tiene ninguna forma de detectar que no
+corresponde a lo dicho: es exactamente la asimetría entre subtítulo ausente y subtítulo
+inventado que atraviesa todo el trabajo. Por eso la aplicación incorpora un filtro que
+descarta el segmento antes de difundirlo, sobre los dos patrones que sí son reconocibles por
+su forma: las muletillas propias del corpus de subtítulos, y los bucles de repetición de una
+misma palabra. El umbral de repetición se fijó en cinco y no en tres porque \emph{«no, no,
+no»} es habla legítima y frecuente.
+
+Conviene declarar con precisión qué \emph{no} hace, porque presentarlo como una garantía
+sería peor que no tenerlo. No detecta alucinaciones plausibles en el dominio, y esa
+limitación está confirmada en uso real: ya con el filtro activo, el sistema transcribió
+\emph{«me he mantenido en silencio durante la noche»} donde el docente había dicho
+\emph{«durante 30 o 40 segundos»}. Esa salida es gramatical, encaja en el contexto y tiene
+longitud normal; ninguna heurística de superficie la distingue de habla real. Detectarla
+exigiría contrastar la hipótesis con el audio, que es un problema distinto y abierto.
+
+El filtro es, por tanto, una reducción de riesgo y no una garantía, y así debe presentarse a
+quien despliegue el sistema. Su valor real es doble: elimina la clase de alucinación que
+aparece en los silencios, que es la más frecuente en un aula por la sencilla razón de que un
+docente pasa buena parte de la clase sin hablar; y deja constancia explícita de que el
+residuo existe.
+
+\subsection{La interfaz}
+
+Las dos vistas son deliberadamente asimétricas. La de recepción muestra el texto y ofrece un
+único control, el tamaño de la letra (RF6). No es una comodidad: el sistema se dirige a
+personas con una discapacidad sensorial, y no cabe suponer que quien lo desarrolla pueda
+fijar un tamaño válido para todas ellas ni para todas las distancias de lectura de un aula.
+
+La de emisión concentra el resto: captura del micrófono, edición del glosario de la sesión,
+latencia medida y un diagnóstico de segmentación que muestra cuántos cortes se han cerrado
+\emph{por pausa} frente a cuántos \emph{por agotar el tope}. Este último contador merece
+explicación, porque no es información de depuración sino la manifestación visible del
+incidente descrito en la sección~\ref{sec:incidentes}: cuando el preprocesado del navegador
+sabotea la detección de silencios, la proporción se desploma hacia el tope. Exponerla en la
+interfaz convierte un fallo silencioso en un fallo observable por quien usa el sistema, sin
+necesidad de leer un registro.
+
+\subsection{Latencia del circuito completo}
+\label{sec:latencia}
+
+RNF1 exige reportar la latencia con su valor típico y su peor caso, y RF7 que el sistema la
+informe. La latencia se descompone en tres sumandos, y conviene separarlos porque solo uno
+es reducible por ingeniería:
+
+\begin{enumerate}
+  \item \textbf{La espera a que el segmento se cierre}, que domina el total: 2,93~s de media
+        y 5,92~s en el percentil 95 con la configuración adoptada. No depende del modelo ni
+        del equipo, sino de cuándo hace una pausa quien habla.
+  \item \textbf{La inferencia}, entre 0,5 y 1,0~s por segmento según su duración, con el
+        modelo elegido sobre la tarjeta gráfica empleada.
+  \item \textbf{El circuito de red y renderizado}, que la aplicación mide directamente en el
+        navegador marcando el instante en que salió el audio y el instante en que vuelve el
+        subtítulo, con un único reloj para que la medida no dependa de la sincronía entre
+        equipos.
+\end{enumerate}
+
+De ahí una conclusión de diseño que conviene explicitar: \textbf{un modelo más rápido no
+rescata un sistema en vivo mal segmentado}. Aunque la inferencia fuera instantánea, seguiría
+habiendo que esperar a que el docente termine la frase, y ese término domina el
+presupuesto. Es la misma conclusión de la comparativa, vista desde el otro lado.
+
+Queda una carencia que se declara como tal: la instrumentación existe y la aplicación
+muestra la cifra en cada sesión, pero no se ha registrado una campaña sistemática de medidas
+del circuito completo en condiciones de aula, de modo que el tercer sumando se conoce por
+observación durante el desarrollo y no por una distribución medida. Es la única magnitud del
+trabajo que se reporta sin respaldo experimental propio, y así consta en la
+sección~\ref{sec:limitaciones}.
+
+\subsection{Verificación de la aplicación}
+
+La lógica del núcleo está cubierta por 88 pruebas automáticas que se ejecutan con un solo
+comando y no requieren ni modelo ni navegador. No son pruebas de trámite: cada grupo fija un
+invariante que se rompió al menos una vez durante el desarrollo, y su reparto es revelador
+de dónde estuvieron los problemas.
+
+El grupo más numeroso, con 21 casos, es el del filtro de red privada, que recorre los
+rangos privados, el bucle local y el enlace local frente a direcciones públicas. Es
+desproporcionado respecto al tamaño del código que verifica, y a propósito: implementa un
+requisito legal, de modo que un falso negativo no es un fallo funcional sino una brecha de
+protección de datos.
+
+Le siguen las 15 del filtro de alucinaciones, que fijan tanto lo que debe descartarse como
+lo que \textbf{no}: cinco repeticiones de una palabra sí, tres no, porque \emph{«no, no,
+no»} es habla legítima. Siguen las 14 del fusionador de solapamiento, que impiden la
+duplicación en las fronteras, el defecto que llegó a producir un error superior al 100\%.
+Las 12 del glosario incluyen la que cierra el incidente de la eñe: comprueban que
+\emph{año} y \emph{ano} no colisionan al normalizar, que es lo que ocurre si la protección
+se aplica después de descomponer en Unicode y no antes. Las nueve del segmentador cubren el
+criterio de corte, y entre ellas están la que detectó que el umbral de silencio debía
+calcularse contra la mediana y no contra el percentil~25, las que fijan el reparto entre
+cortes por pausa y por tope que la interfaz muestra al docente, y la que comprueba que un
+segmento sin voz suficiente se descarta antes de llegar al modelo. Las siete de la sesión
+cubren la incorporación tardía de un cliente, y las cinco del control de acceso al puesto
+docente incluyen el camino que deja la emisión abierta cuando no hay clave configurada.
+
+Las cinco últimas son de otra clase: verifican el fichero de configuración contra el
+código. Dos comprueban que ninguna clave de comentario se cuele donde el sistema de
+registro las interpretaría como niveles, un fallo que dejó la aplicación en bucle de
+reinicio dentro del contenedor sin que el error apuntara al fichero. Las otras tres
+comprueban que la sección de segmentación llega al objeto que la usa, que sus valores son
+los documentados en esta memoria, y que el glosario configurado no acaba vacío. Existen
+porque el enlace de configuración no falla cuando una clave no coincide: usa el valor por
+defecto y sigue, sin excepción ni aviso. Dos secciones enteras quedaron así inertes durante
+un tiempo, entre ellas la del glosario, que dejó RF4 sin marcar nada sin que nada lo
+delatara.
+
+\subsection{Despliegue y portabilidad}
+
+El sistema se despliega con dos contenedores: el que reconoce, que necesita tarjeta gráfica,
+y el que sirve la interfaz, que no. El fabricante de la tarjeta se elige mediante perfiles,
+porque las dos formas de exponer una GPU a un contenedor son incompatibles entre sí y no
+pueden coexistir en la misma definición.
+
+Dos decisiones de esa configuración merecen constar. La primera es que ambos contenedores
+comparten la red del anfitrión en lugar de publicar puertos: los núcleos recientes de la
+distribución empleada no incluyen los módulos de compatibilidad de cortafuegos que la
+redirección de puertos necesita, y el aislamiento de red no aportaría nada aquí, porque el
+sistema sirve a la red local de todos modos y la restricción de alcance la impone la
+aplicación. El reparto resultante es el deseado: el reconocedor escucha solo en bucle local
+y la aplicación en todas las interfaces. La segunda es que las cachés de modelo y de núcleos
+compilados se persisten en volúmenes; sin ellos, cada arranque volvería a descargar varios
+gigabytes y a recompilar los núcleos de cálculo, porque la plataforma empleada no distribuye
+binarios precompilados para esa generación de tarjeta.
+
+El servicio de reconocimiento selecciona acelerador en tiempo de arranque entre tarjeta
+dedicada, acelerador de Apple Silicon y procesador convencional, forzando precisión simple
+en el segundo caso porque su implementación no cubre la precisión reducida en todas las
+operaciones del modelo.
+
+Esa portabilidad tiene un límite que conviene declarar donde se describe, y no solo en el
+manual de despliegue: sobre la arquitectura de Apple, común a sus portátiles y a sus equipos
+de sobremesa, las dos vías son incompatibles entre sí. Los contenedores en ese sistema corren
+dentro de una máquina virtual que no expone el acelerador, de modo que el despliegue
+contenerizado quedaría en procesador, con el factor de tiempo real insuficiente que mide la
+sección~\ref{sec:hardware}. La vía válida allí es la ejecución nativa. Y el rendimiento de ese acelerador no está medido en este trabajo: se ha comprobado
+que el servicio lo detecta y transcribe, pero el barrido de dispositivos comparó únicamente
+tarjeta dedicada y procesador. Esa portabilidad es de la \emph{aplicación}, no de los experimentos:
+los programas de investigación siguen fijando tarjeta dedicada o procesador, porque se
+ejecutan en el equipo de desarrollo y ampliar ahí la selección cambiaría resultados ya
+medidos.
+
+\subsection{Incorporación de la técnica ganadora}
+\label{sec:integracion}
+
+El octavo objetivo exigía que la técnica ganadora entrara en el sistema desplegado sin
+modificar la aplicación. Se cumple literalmente: el servicio de reconocimiento acepta la
+ruta de un adaptador y lo aplica sobre el modelo base al cargarlo, de modo que incorporar el
+resultado del ajuste fino es un argumento de arranque. La aplicación no se entera, porque
+depende de la interfaz de reconocimiento y no de lo que haya detrás. La configuración de
+despliegue expone esa ruta como variable, con el modelo base como valor por defecto.
+
+Es la justificación práctica de la frontera entre los dos núcleos: permitió enseñar una demo
+funcionando mientras la comparativa seguía en curso, y sustituir el modelo por el adaptado
+al terminarla sin tocar una línea de la aplicación.
 
 \section{Incidentes metodológicos}
 \label{sec:incidentes}
@@ -355,6 +792,23 @@ contenido ya era otro, y nada lo delataba. La corrección fue doble: registrar e
 criptográfico del manifiesto en cada resultado, para detectar la discrepancia, y permitir
 que varias muestras de la misma fuente convivan, para prevenirla.
 
+\textbf{El mismo fallo, un nivel más arriba.} La corrección anterior resolvió el manifiesto
+pero no el \emph{resultado}. La identidad de un resultado se compone de modelo, corpus y
+decodificación, y no incluye el tamaño de la muestra; al reevaluar el modelo elegido sobre
+la ampliación, su fichero sobrescribió al de la muestra reducida. Las dos cifras eran
+correctas por separado, pero el generador de tablas las ponía en la misma columna que las de
+los otros dos modelos, medidos sobre 40 fragmentos: una comparación de 1.200 contra 40
+presentada como si fuera pareada. Se detectó al auditar la memoria contra sus datos, no al
+producirla. La corrección aplicada es que el generador arrastra el número de fragmentos por
+fila, comprueba que todas las filas coincidan y, si no, lo advierte en la consola y en el
+propio pie de la tabla. La solución de fondo es la que ya se aplicó a otro corpus:
+\textbf{que la muestra forme parte del nombre}, de modo que dos tamaños no puedan colisionar.
+
+El patrón que comparten ambos incidentes merece enunciarse, porque es la lección general del
+trabajo: cada vez que se añade un eje de variación, sea el corpus, la decodificación, el
+solapamiento o el tamaño de la muestra, hay que añadirlo a la \emph{identidad} del resultado.
+Omitirlo no produce un error: produce una comparación inválida con aspecto de tabla.
+
 \textbf{Un entrenamiento roto que no daba error.} El primer ajuste con LoRA terminó
 correctamente, guardó su adaptador y produjo métricas evaluables, con la función de pérdida
 estancada en 6,87 y subiendo entre épocas. La causa era que el preparador de lotes
@@ -367,6 +821,37 @@ intervalo estrecho y significación respaldando un artefacto.
 tildes de forma sistemática. Entrenar sobre él habría enseñado al modelo a no acentuar y,
 medido contra esas mismas referencias, la tasa de error \emph{habría mejorado}: se habría
 optimizado hacia el error con la métrica dando la razón.
+
+\textbf{La eñe desaparecida.} Para comparar cadenas ignorando la acentuación, el
+procedimiento habitual es descomponer el texto en Unicode y descartar los diacríticos. Hecho
+así sobre español, la eñe se convierte en ene, porque en forma descompuesta \emph{ñ} ya es
+\emph{n} más una tilde combinante. La comprobación que pretendía protegerla se escribía
+\emph{después} de descomponer, de modo que no se cumplía nunca. En español eso no es
+cosmético: cambia la palabra. El error se cometió dos veces, una en cada lenguaje del
+proyecto, y en ambos casos el programa funcionaba y devolvía cifras. La eñe se sustituye
+ahora por un centinela \emph{antes} de descomponer.
+
+\textbf{Configuración que no llega y contadores que no cuentan.} Al auditar la memoria
+contra el código aparecieron tres piezas que declaraban una intención sin ejecutarla, y
+ninguna emitía error. Dos secciones del fichero de configuración habían quedado inertes al
+traducir los identificadores del código al inglés sin traducir las claves del fichero: el
+enlace no falla cuando un nombre no coincide, se queda con el valor por defecto y sigue. La
+del glosario dejaba la lista vacía en todos los despliegues, de modo que el resaltado de
+terminología no marcaba nada; la de segmentación hacía que ajustar el umbral de silencio no
+tuviera ningún efecto, precisamente lo que un comentario del propio fichero recomendaba
+hacer si el diagnóstico se desplomaba hacia el tope. Y ese diagnóstico tampoco funcionaba:
+sus dos contadores estaban declarados, documentados y expuestos en la interfaz, pero nunca
+se incrementaban, así que mostraban cero indefinidamente. Junto a ellos, una comprobación
+que debía descartar los segmentos sin voz suficiente antes de enviarlos al modelo estaba
+escrita, comentada y sin usar.
+
+Las tres comparten la forma de los demás incidentes de esta sección: código que se ejecuta
+sin fallar y produce un resultado plausible, en este caso un glosario vacío, un ajuste sin
+efecto y un contador a cero, ninguno de los cuales se distingue del comportamiento
+correcto sin ir a comprobarlo. Y las tres tienen la misma corrección, que es la general del
+trabajo aplicada al código en lugar de a los datos: una prueba automática que ata la
+descripción a lo que el sistema hace de verdad. Las cuatro pruebas de configuración
+descritas más arriba existen por esto.
 
 \textbf{Un preprocesado que anula la segmentación.} Al probar la aplicación con micrófono
 real, casi todos los segmentos se cerraban por agotar el tope en lugar de por pausa. La

@@ -1,0 +1,20 @@
+{
+  "herramienta": "huella_recursos",
+  "fecha_utc": "2026-08-14T00:14:05.935565+00:00",
+  "modelo": "openai/whisper-small",
+  "adaptador": null,
+  "dispositivo": "cuda",
+  "dtype": "float16",
+  "disco_gb": 0.9,
+  "vram_pesos_gb": 0.47,
+  "vram_pico_gb": 0.56,
+  "ram_proceso_gb": 2.57,
+  "ram_incremento_gb": 1.46,
+  "segundos_audio_prueba": 30.0,
+  "entorno": {
+    "python": "3.14.6",
+    "torch": "2.13.0",
+    "gpu": "AMD Radeon RX 9070 XT",
+    "vram_total_gb": 15.92
+  }
+}

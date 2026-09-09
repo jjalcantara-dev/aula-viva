@@ -9,17 +9,17 @@
     \hline
     \textbf{Corpus} & \textbf{Variedad} & \textbf{Registro} & \textbf{tiny} & \textbf{base} & \textbf{small} & \textbf{medium} & \textbf{large--v3--turbo} & \textbf{large--v3} & \textbf{$\Delta$ tildes} \\
     \hline
-    \texttt{voxpopuli-es-400} & ? & ? & -- & -- & -- & 9.63 & -- & -- & $-$0.17 \\
     \texttt{fleurs-es} & Latinoamérica & Leída, enciclopédica & 19.44 & 11.42 & 6.61 & 3.21 & 3.41 & 3.01 & -- \\
     \texttt{tedx-es} & México & Charla espontánea & -- & -- & 12.13 & 10.22 & 11.12 & -- & $-$3.48 \\
-    \texttt{teleconciencia-es} & México & Divulgación científica & -- & -- & 23.42 & 18.61 & 22.26 & -- & $-$5.11 \\
+    \texttt{teleconciencia-es}$^{\dagger}$ & México & Divulgación científica & -- & -- & 23.42 & 18.61 & 22.26 & -- & $-$5.11 \\
     \texttt{mediaspeech-es} & Peninsular & Medios, locución & -- & -- & 15.94 & 14.72 & 15.60 & -- & $-$1.70 \\
     \texttt{voxpopuli-es} & Peninsular & Parlamentario & -- & -- & 12.01 & 10.44 & 11.53 & -- & $-$0.07 \\
+    \texttt{voxpopuli-es-400} & Peninsular & Parlamentario & -- & -- & -- & 9.63 & -- & -- & $-$0.17 \\
     \hline
 \end{tabular}}
-\caption{WER (\%) de los modelos Whisper sin adaptar segun corpus, con normalizacion
-basica. La columna $\Delta$ tildes indica cuanto baja el WER de \texttt{medium} al
-ignorar la acentuacion: valores altos delatan referencias con tildes omitidas (R11), no
-mejor reconocimiento.}
+\caption{WER (\%) de los modelos Whisper sin adaptar según corpus, con normalización
+básica. La columna $\Delta$ tildes indica cuánto baja el WER de \texttt{medium} al
+ignorar la acentuación: valores altos delatan referencias con tildes omitidas, no mejor
+reconocimiento. El símbolo $\dagger$ marca las filas cuyas celdas \textbf{no} comparten tamaño de muestra (\texttt{teleconciencia-es}): esos corpus se ampliaron después del barrido inicial y solo el modelo elegido se reevaluó sobre la ampliación, de modo que comparar columnas dentro de esa fila no es válido. Para comparar modelos entre sí, usar las tablas por corpus, que declaran la muestra fila a fila.}
 \label{tab:baseline-corpus}
 \end{table}

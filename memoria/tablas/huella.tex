@@ -1,0 +1,22 @@
+% GENERADO AUTOMATICAMENTE por research/eval/report/tabla_huella.py
+% No editar a mano.
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{|l|r|r|r|}
+    \hline
+    \textbf{Modelo} & \textbf{Disco (GB)} & \textbf{VRAM pico (GB)} &
+    \textbf{RAM del proceso (GB)} \\
+    \hline
+    \texttt{whisper-small} & 0.90 & 0.56 & 2.57 \\
+    \texttt{whisper-medium} & 2.85 & 1.60 & 2.76 \\
+    \texttt{whisper-medium + LoRA} & 2.85 & 1.63 & 2.78 \\
+    \hline
+\end{tabular}
+\caption{Huella de recursos del servicio de reconocimiento, medida sobre
+AMD Radeon RX 9070 XT con precisión \texttt{float16} y una ventana completa de 30~s de audio, que
+es el caso peor. El pico de VRAM mayor observado es 1.63~GB, de donde sale el
+requisito de 4~GB de la tabla~\ref{tab:requisitos-despliegue}: el margen cubre el
+gestor de ventanas del propio equipo y la fragmentación de memoria.}
+\label{tab:huella}
+\end{table}
