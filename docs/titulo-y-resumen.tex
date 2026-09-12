@@ -1,0 +1,69 @@
+% Documento de presentacion para la primera reunion con el tutor.
+% Titulo y resumen del TFM, media pagina como maximo.
+% Compilar: pdflatex titulo-y-resumen.tex
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-noquoting]{babel}
+\usepackage[margin=2.7cm]{geometry}
+\usepackage{graphicx}
+\usepackage{parskip}
+\usepackage{xcolor}
+
+\definecolor{azulunir}{RGB}{0,51,102}
+
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+\includegraphics[height=1.15cm]{../memoria/logo_unir.pdf}
+
+\vspace{0.4cm}
+
+{\color{azulunir}\large\bfseries Trabajo Fin de Máster}
+
+{\color{azulunir}Máster Universitario en Inteligencia Artificial · Modalidad individual}
+
+\vspace{0.1cm}
+{\color{azulunir}\rule{\textwidth}{0.8pt}}
+\vspace{0.3cm}
+
+{\Large\bfseries Sistema de accesibilidad educativa en tiempo real con transcripción
+adaptativa: comparativa de técnicas sobre modelos ASR en español\par}
+
+\vspace{0.4cm}
+
+\begin{tabular}{@{}ll@{}}
+\textbf{Autor:} & Jesús Jiménez Alcántara \\
+\textbf{Tutor:} & Ángel Soriano Vigueras \\
+\textbf{Naturaleza:} & Doble núcleo: investigador (Tipo 3) y aplicado (Tipo 2) \\
+\textbf{Fecha:} & Septiembre de 2026 \\
+\end{tabular}
+
+\vspace{0.7cm}
+
+{\color{azulunir}\bfseries\large Resumen}
+
+\vspace{0.2cm}
+
+Este trabajo aborda el subtitulado automático de clases presenciales, dirigido al alumnado
+con discapacidad auditiva y a quien cursa la asignatura en una lengua que no es la suya. La
+pregunta que plantea es si las técnicas habituales de adaptación al dominio mejoran el
+reconocimiento automático del habla en español lo suficiente para ese uso. Se comparan tres
+de ellas sobre Whisper: el prompting contextual, la post-corrección mediante un modelo de
+lenguaje local y el ajuste fino con LoRA. La comparación se realiza sobre corpus públicos en
+español, con diseño pareado, intervalos de confianza por bootstrap y test de signos, y
+atiende además a los modos de fallo que la tasa de error agregada no refleja, como la
+pérdida de negaciones o de terminología propia de la materia. El trabajo incluye una segunda
+parte aplicada: una aplicación de subtitulado en vivo desplegable en la red local de un
+centro, con un emisor y múltiples receptores y todo el cálculo en el servidor, sobre la que
+se caracteriza el compromiso entre latencia y calidad que impone el troceado del audio.
+
+\vspace{0.4cm}
+
+\textbf{Palabras clave:} accesibilidad educativa; reconocimiento automático del habla;
+adaptación al dominio; subtitulado en tiempo real; evaluación de sistemas ASR.
+
+\end{document}
